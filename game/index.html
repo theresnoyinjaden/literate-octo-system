@@ -214,6 +214,79 @@ html, body {
   margin-bottom: 30px;
 }
 
+.slot-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.slot-box {
+  flex: 1;
+  min-width: 0;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px 10px;
+  text-align: center;
+}
+
+.slot-label {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  margin-bottom: 10px;
+}
+
+.slot-value {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 7vw, 32px);
+  line-height: 1.1;
+  color: var(--paper-dim);
+  min-height: 1.1em;
+  overflow-wrap: break-word;
+}
+
+.slot-value.settled {
+  color: var(--gold);
+  animation: settle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.artist-reveal {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 26px 0;
+}
+
+.artist-placeholder {
+  color: var(--paper-dim);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reroll-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto 14px;
+}
+
+.reroll-row .btn {
+  flex: 1;
+  padding: 14px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -13354,6 +13427,23 @@ html, body {
     });
     return Array.from(genres);
   }
+  function genreOptionsFor(usedIds) {
+    const genres = /* @__PURE__ */ new Set();
+    ARTISTS.forEach((a) => {
+      if (usedIds.has(a.id)) return;
+      a.genres.forEach((g) => genres.add(g));
+    });
+    return Array.from(genres);
+  }
+  function decadeOptionsForGenre(genre, usedIds) {
+    const decades = /* @__PURE__ */ new Set();
+    ARTISTS.forEach((a) => {
+      if (usedIds.has(a.id)) return;
+      if (!a.genres.includes(genre)) return;
+      a.decades.forEach((d) => decades.add(d));
+    });
+    return Array.from(decades);
+  }
   function pickArtist(decade, genre, usedIds) {
     const candidates = ARTISTS.filter(
       (a) => !usedIds.has(a.id) && a.decades.includes(decade) && a.genres.includes(genre)
@@ -13361,73 +13451,48 @@ html, body {
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
+  function pickRandom(options) {
+    return options[Math.floor(Math.random() * options.length)];
+  }
   function pickDifferent(options, exclude) {
     const filtered = options.filter((o) => o !== exclude);
     const pickFrom = filtered.length > 0 ? filtered : options;
     return pickFrom[Math.floor(Math.random() * pickFrom.length)];
   }
+  function rollDecadeGenreArtist(usedIds) {
+    const decade = pickRandom(decadeOptionsFor(usedIds));
+    const genre = pickRandom(genreOptionsForDecade(decade, usedIds));
+    const artist = pickArtist(decade, genre, usedIds);
+    return { decade, genre, artist };
+  }
   function NumberField() {
     const cells = Array.from({ length: 18 }, (_, i) => i % 26 + 1);
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "numfield", children: cells.map((n, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: n }, i)) });
   }
-  function RollScreen({ label, options, rerollAvailable, onRerollUsed, onDone }) {
+  function SlotReel({ label, options, finalValue, spinKey, onSettled }) {
     const [phase, setPhase] = useState("spinning");
     const [display, setDisplay] = useState(options[0]);
-    const [finalValue, setFinalValue] = useState(null);
     const timerRef = useRef(null);
-    const canReroll = rerollAvailable && options.length > 1;
-    const runSpin = useCallback(
-      (excludeValue) => {
-        setPhase("spinning");
-        let ticks = 0;
-        const maxTicks = 10 + Math.floor(Math.random() * 4);
-        clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => {
-          ticks++;
-          setDisplay(options[Math.floor(Math.random() * options.length)]);
-          if (ticks >= maxTicks) {
-            clearInterval(timerRef.current);
-            const result = pickDifferent(options, excludeValue);
-            setDisplay(result);
-            setFinalValue(result);
-            setPhase("settled");
-          }
-        }, 60);
-      },
-      [options]
-    );
     useEffect(() => {
-      runSpin(null);
+      setPhase("spinning");
+      let ticks = 0;
+      const maxTicks = 10 + Math.floor(Math.random() * 4);
+      clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        ticks++;
+        setDisplay(options[Math.floor(Math.random() * options.length)]);
+        if (ticks >= maxTicks) {
+          clearInterval(timerRef.current);
+          setDisplay(finalValue);
+          setPhase("settled");
+          onSettled && onSettled();
+        }
+      }, 60);
       return () => clearInterval(timerRef.current);
-    }, []);
-    function handleReroll() {
-      if (!canReroll || phase !== "settled") return;
-      onRerollUsed();
-      runSpin(finalValue);
-    }
-    function handleAccept() {
-      if (phase !== "settled") return;
-      onDone(finalValue);
-    }
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumberField, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content screen-center", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "step-label", children: label }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "roll-value " + (phase === "settled" ? "settled" : "spinning"), children: display }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "roll-sub", children: phase === "spinning" ? "Rolling\u2026" : "Locked in? Or take one reroll." }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "stack", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: handleAccept, disabled: phase !== "settled", children: "Accept" }),
-          rerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              className: "btn btn-ghost btn-wide",
-              onClick: handleReroll,
-              disabled: phase !== "settled" || !canReroll,
-              children: "Reroll \u2014 1 left"
-            }
-          )
-        ] })
-      ] })
+    }, [spinKey]);
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-box", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "slot-label", children: label }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "slot-value " + (phase === "settled" ? "settled" : "spinning"), children: display })
     ] });
   }
   function HomeScreen({ onPlay }) {
@@ -13489,86 +13554,115 @@ html, body {
   }
   function DraftFlow({ onComplete }) {
     const [round, setRound] = useState(0);
-    const [subPhase, setSubPhase] = useState("decade");
+    const [subPhase, setSubPhase] = useState("roll");
     const [assignments, setAssignments] = useState({});
     const [usedArtistIds, setUsedArtistIds] = useState(() => /* @__PURE__ */ new Set());
-    const [currentDecade, setCurrentDecade] = useState(null);
-    const [currentGenre, setCurrentGenre] = useState(null);
-    const [currentArtist, setCurrentArtist] = useState(null);
+    const [roll, setRoll] = useState(() => rollDecadeGenreArtist(/* @__PURE__ */ new Set()));
     const [decadeRerollAvailable, setDecadeRerollAvailable] = useState(true);
     const [genreRerollAvailable, setGenreRerollAvailable] = useState(true);
-    if (subPhase === "decade") {
-      const options = decadeOptionsFor(usedArtistIds);
-      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "screen", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: null, genre: null }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          RollScreen,
-          {
-            label: "Your era",
-            options,
-            rerollAvailable: decadeRerollAvailable,
-            onRerollUsed: () => setDecadeRerollAvailable(false),
-            onDone: (d) => {
-              setCurrentDecade(d);
-              setSubPhase("genre");
-            }
-          },
-          "decade-" + round
-        )
-      ] }) });
+    const [decadeSettled, setDecadeSettled] = useState(false);
+    const [genreSettled, setGenreSettled] = useState(false);
+    const [decadeSpinKey, setDecadeSpinKey] = useState(0);
+    const [genreSpinKey, setGenreSpinKey] = useState(0);
+    const bothSettled = decadeSettled && genreSettled;
+    function rerollDecade() {
+      if (!decadeRerollAvailable) return;
+      setDecadeRerollAvailable(false);
+      const compatibleDecades = decadeOptionsForGenre(roll.genre, usedArtistIds);
+      const pool = compatibleDecades.length > 1 ? compatibleDecades : decadeOptionsFor(usedArtistIds);
+      const newDecade = pickDifferent(pool, roll.decade);
+      const validGenres = genreOptionsForDecade(newDecade, usedArtistIds);
+      const newGenre = validGenres.includes(roll.genre) ? roll.genre : pickRandom(validGenres);
+      const newArtist = pickArtist(newDecade, newGenre, usedArtistIds);
+      setRoll({ decade: newDecade, genre: newGenre, artist: newArtist });
+      setDecadeSettled(false);
+      setDecadeSpinKey((k) => k + 1);
+      if (newGenre !== roll.genre) {
+        setGenreSettled(false);
+        setGenreSpinKey((k) => k + 1);
+      }
     }
-    if (subPhase === "genre") {
-      const options = genreOptionsForDecade(currentDecade, usedArtistIds);
-      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "screen", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: currentDecade, genre: "?" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          RollScreen,
-          {
-            label: "Your genre",
-            options,
-            rerollAvailable: genreRerollAvailable,
-            onRerollUsed: () => setGenreRerollAvailable(false),
-            onDone: (g) => {
-              const artist = pickArtist(currentDecade, g, usedArtistIds);
-              setCurrentGenre(g);
-              setCurrentArtist(artist);
-              setSubPhase("artist");
-            }
-          },
-          "genre-" + round
-        )
-      ] }) });
+    function rerollGenre() {
+      if (!genreRerollAvailable) return;
+      setGenreRerollAvailable(false);
+      const options = genreOptionsForDecade(roll.decade, usedArtistIds);
+      const newGenre = pickDifferent(options, roll.genre);
+      const newArtist = pickArtist(roll.decade, newGenre, usedArtistIds);
+      setRoll({ decade: roll.decade, genre: newGenre, artist: newArtist });
+      setGenreSettled(false);
+      setGenreSpinKey((k) => k + 1);
     }
     function handleAssign(catKey) {
-      if (assignments[catKey] || !currentArtist) return;
+      if (assignments[catKey] || !roll.artist) return;
       const nextAssignments = {
         ...assignments,
-        [catKey]: { artist: currentArtist, decade: currentDecade, genre: currentGenre }
+        [catKey]: { artist: roll.artist, decade: roll.decade, genre: roll.genre }
       };
       const nextUsed = new Set(usedArtistIds);
-      nextUsed.add(currentArtist.id);
+      nextUsed.add(roll.artist.id);
       if (round + 1 >= 6) {
         setAssignments(nextAssignments);
         setTimeout(() => onComplete(nextAssignments), 240);
       } else {
         setAssignments(nextAssignments);
         setUsedArtistIds(nextUsed);
-        setCurrentDecade(null);
-        setCurrentGenre(null);
-        setCurrentArtist(null);
         setRound(round + 1);
-        setSubPhase("decade");
+        setSubPhase("roll");
+        setRoll(rollDecadeGenreArtist(nextUsed));
+        setDecadeRerollAvailable(true);
+        setGenreRerollAvailable(true);
+        setDecadeSettled(false);
+        setGenreSettled(false);
+        setDecadeSpinKey((k) => k + 1);
+        setGenreSpinKey((k) => k + 1);
       }
+    }
+    if (subPhase === "roll") {
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumberField, {}),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: bothSettled ? roll.decade : null, genre: roll.genre }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen-center", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-row", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                SlotReel,
+                {
+                  label: "Your era",
+                  options: decadeOptionsFor(usedArtistIds),
+                  finalValue: roll.decade,
+                  spinKey: decadeSpinKey,
+                  onSettled: () => setDecadeSettled(true)
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                SlotReel,
+                {
+                  label: "Your genre",
+                  options: genreOptionsFor(usedArtistIds),
+                  finalValue: roll.genre,
+                  spinKey: genreSpinKey,
+                  onSettled: () => setGenreSettled(true)
+                }
+              )
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-reveal", children: bothSettled ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-name enter", children: roll.artist ? roll.artist.name : "—" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-placeholder", children: "Rolling…" }) }),
+            (decadeRerollAvailable || genreRerollAvailable) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reroll-row", children: [
+              decadeRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollDecade, disabled: !bothSettled, children: "Reroll era — 1 left" }),
+              genreRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollGenre, disabled: !bothSettled, children: "Reroll genre — 1 left" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "stack", style: { marginTop: 14 }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: () => setSubPhase("assign"), disabled: !bothSettled, children: "Accept" }) })
+          ] })
+        ] })
+      ] });
     }
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
       ArtistAssignScreen,
       {
         round,
-        decade: currentDecade,
-        genre: currentGenre,
-        artist: currentArtist,
+        decade: roll.decade,
+        genre: roll.genre,
+        artist: roll.artist,
         assignments,
         onAssign: handleAssign
       }
@@ -13625,8 +13719,6 @@ html, body {
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "meta-line", style: { textAlign: "center" }, children: [
         "Core ",
         result.core.toFixed(1),
-        " \xB7 Star Power ",
-        result.starPowerAvg.toFixed(1),
         " \xB7 Combined",
         " ",
         result.combined.toFixed(1)

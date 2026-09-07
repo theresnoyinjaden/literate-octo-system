@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-<title>52-0 — Era Roll</title>
+<title>52-0 — Era &amp; Genre Roll</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -30,29 +30,61 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
 .btn:disabled { opacity: 0.35; cursor: default; }
 .btn-wide { width: 100%; }
 .stack { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin: 0 auto; }
-.step-label { font-family: var(--font-body); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; color: var(--magenta); margin-bottom: 6px; }
-.roll-value { font-family: var(--font-display); font-size: clamp(46px, 15vw, 84px); line-height: 1; color: var(--gold); margin: 10px 0 6px; min-height: 1.1em; }
-.roll-sub { color: var(--paper-dim); font-size: 14px; margin-bottom: 30px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold); border-radius: 999px; padding: 6px 14px; }
+.round-track { display: flex; gap: 6px; margin: 4px 0 22px; }
+.round-dot { flex: 1; height: 5px; border-radius: 3px; background: var(--ink-3); }
+.round-dot.done { background: var(--gold); }
+.round-dot.active { background: var(--magenta); }
+.slot-row { display: flex; gap: 12px; width: 100%; max-width: 380px; margin: 0 auto; }
+.slot-box { flex: 1; min-width: 0; background: var(--ink-2); border: 1px solid var(--line); border-radius: 18px; padding: 20px 10px; text-align: center; }
+.slot-label { font-family: var(--font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--magenta); margin-bottom: 10px; }
+.slot-value { font-family: var(--font-display); font-size: clamp(22px, 7vw, 32px); line-height: 1.1; color: var(--gold); min-height: 1.1em; overflow-wrap: break-word; }
+.artist-reveal { min-height: 64px; display: flex; align-items: center; justify-content: center; margin: 26px 0; }
+.artist-name { font-family: var(--font-display); font-size: clamp(34px, 9vw, 52px); line-height: 1.02; color: var(--paper); }
+.reroll-row { display: flex; gap: 10px; width: 100%; max-width: 380px; margin: 0 auto 14px; }
+.reroll-row .btn { flex: 1; padding: 14px 8px; font-size: 12px; white-space: nowrap; }
 </style>
 </head>
 <body>
 <div id="root">
-  <!-- Current state, extracted from RollScreen() in game/index.html. This is the "era reveal" moment shown at the top of every round (6x per playthrough).
-       Known gap: while settled it shows only the step label, value and two buttons — there's no round/progress context here (that only appears on the NEXT screen), so a player who reopens the game mid-round can't tell where they are.
-       Feed to superdesign_iterate with feedback like: "add round progress context to this reveal moment without breaking the dramatic centered reveal; give the reroll option more visual presence since it's a strategic decision, not an afterthought." -->
+  <!-- Current state, extracted from DraftFlow()'s "roll" subPhase in game/index.html: era and genre now roll simultaneously as two side-by-side slot reels, settle independently, reveal the drafted artist below once both land, and each reel can be rerolled once per round.
+       Possible next round of polish: the two reels currently settle in lockstep visual weight — a staggered settle (genre landing a beat after era) or a per-reel "locking" sound/flash cue would sell the slot-machine metaphor harder. The artist reveal itself is a plain name with no entrance flourish beyond a fade — could earn the same celebratory treatment as the ResultScreen's number reveal. -->
   <div class="screen">
-    <div class="numfield">
-      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
-      <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
-      <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
-    </div>
-    <div class="content screen-center">
-      <div class="step-label">YOUR ERA</div>
-      <div class="roll-value">1990s</div>
-      <div class="roll-sub">Locked in? Or take one reroll.</div>
-      <div class="stack">
-        <button class="btn btn-primary btn-wide">Accept</button>
-        <button class="btn btn-ghost btn-wide">Reroll — 1 left</button>
+    <div class="content">
+      <div class="topbar">
+        <span class="pillbadge">2000s · PUNK ROCK</span>
+        <span class="pillbadge" style="background:var(--magenta);color:var(--paper)">Round 1/6</span>
+      </div>
+      <div class="round-track">
+        <div class="round-dot active"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+      </div>
+      <div class="screen-center">
+        <div class="slot-row">
+          <div class="slot-box">
+            <div class="slot-label">Your era</div>
+            <div class="slot-value">2000s</div>
+          </div>
+          <div class="slot-box">
+            <div class="slot-label">Your genre</div>
+            <div class="slot-value">Punk Rock</div>
+          </div>
+        </div>
+        <div class="artist-reveal">
+          <div class="artist-name">Green Day</div>
+        </div>
+        <div class="reroll-row">
+          <button class="btn btn-ghost">Reroll era — 1 left</button>
+          <button class="btn btn-ghost">Reroll genre — 1 left</button>
+        </div>
+        <div class="stack" style="margin-top:14px">
+          <button class="btn btn-primary btn-wide">Accept</button>
+        </div>
       </div>
     </div>
   </div>

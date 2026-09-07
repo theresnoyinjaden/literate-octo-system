@@ -43,8 +43,8 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
 </head>
 <body>
 <div id="root">
-  <!-- Current state, extracted from ResultScreen() in game/index.html.
-       Known gap: "Core / Star Power / Combined" (the .meta-line) is the ONLY explanation of how the score/scoring curve works, and it's rendered as small dim text below the roster — easy to miss, and doesn't explain the scoring model at all (e.g. why 96.5 combined = 37 weeks). Also every roster row shows the same gold color regardless of whether that particular rating was a weak link or a highlight, so there's no at-a-glance read on which pick to blame/credit.
+  <!-- Current state, extracted from ResultScreen() in game/index.html. Star Power is a hidden scoring input and must never appear in this screen's copy.
+       Known gap: "Core / Combined" (the .meta-line) is the ONLY explanation of how the score/scoring curve works, and it's rendered as small dim text below the roster — easy to miss, and doesn't explain the scoring model at all (e.g. why 96.5 combined = 37 weeks). Also every roster row shows the same gold color regardless of whether that particular rating was a weak link or a highlight, so there's no at-a-glance read on which pick to blame/credit.
        Feed to superdesign_iterate with feedback like: "make the score breakdown legible enough to teach the scoring model on first read, and color/weight each roster row by how strong that rating was (e.g. dim vs bright gold) so the player can see their weak link at a glance." -->
   <div class="screen">
     <div class="content">
@@ -116,7 +116,7 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
           </div>
         </div>
       </div>
-      <div class="meta-line" style="text-align:center">Core 96.2 · Star Power 99.7 · Combined 96.5</div>
+      <div class="meta-line" style="text-align:center">Core 96.2 · Combined 96.5</div>
       <div class="stack">
         <button class="btn btn-primary btn-wide">Play again</button>
       </div>
