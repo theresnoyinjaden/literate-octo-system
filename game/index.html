@@ -138,6 +138,24 @@ html, body {
   margin-top: 10px;
 }
 
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.stat-chip {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--paper-dim);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+}
+
 .btn {
   font-family: var(--font-body);
   font-weight: 700;
@@ -400,6 +418,32 @@ html, body {
   gap: 10px;
 }
 
+.cat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 2px 0 20px;
+}
+
+.cat-chip {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+  transition: opacity 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+.cat-chip.done {
+  opacity: 0.4;
+  background: transparent;
+  color: var(--paper-dim);
+}
+
 .cat-btn {
   display: flex;
   align-items: center;
@@ -505,6 +549,53 @@ html, body {
   to { text-shadow: 0 0 46px rgba(56, 189, 248, 0.55); }
 }
 
+.record.spotlight {
+  animation: record-spotlight-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes record-spotlight-pulse {
+  0%, 100% { transform: scale(1); text-shadow: 0 0 40px rgba(232, 185, 35, 0.55); }
+  50% { transform: scale(1.06); text-shadow: 0 0 90px rgba(232, 185, 35, 0.95); }
+}
+
+.spotlight-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 32%, transparent 0, transparent 130px, rgba(0, 0, 0, 0.82) 320px);
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.spotlight-overlay.active {
+  opacity: 1;
+}
+
+.confetti-field {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10vh;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.35, 0, 0.65, 1);
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx), 115vh) rotate(var(--dr)); opacity: 0.9; }
+}
+
 .weeks-line {
   font-size: 15px;
   font-weight: 700;
@@ -514,15 +605,36 @@ html, body {
 }
 
 .tier-tag {
-  display: inline-block;
-  margin: 10px auto 26px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ink);
-  background: var(--paper);
-  border-radius: 999px;
-  padding: 7px 16px;
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 8vw, 38px);
+  letter-spacing: 0.03em;
+  color: var(--paper-dim);
+  margin: 4px 0 10px;
+}
+
+.tier-tag.tier-good {
+  color: var(--magenta);
+}
+
+.tier-tag.tier-excellent,
+.tier-tag.tier-exceptional,
+.tier-tag.tier-perfect {
+  background: var(--gold-shine);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 4s ease-in-out infinite;
+}
+
+.result-quote {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--paper-dim);
+  max-width: 320px;
+  margin: 0 auto 22px;
+  line-height: 1.4;
 }
 
 .roster {
@@ -13380,7 +13492,9 @@ html, body {
   globalThis.React = import_react.default;
   globalThis.ReactDOM = import_client.default;
   var { useState, useEffect, useRef, useCallback } = import_react.default;
-  var ARTISTS = JSON.parse(document.getElementById("artist-data").textContent);
+  var ARTISTS = JSON.parse(document.getElementById("artist-data").textContent).map((a) => Object.assign({}, a, {
+    decades: Array.from(new Set(a.decades.map((d) => parseInt(d, 10) <= 1960 ? "<1960s" : d)))
+  }));
   var CATEGORIES = [
     { key: "vocals", label: "Vocals" },
     { key: "songwriting", label: "Songwriting" },
@@ -13451,6 +13565,51 @@ html, body {
     else if (weeks >= 40) tier = "EXCELLENT";
     else if (weeks >= 30) tier = "GOOD";
     return { rows, core, starPowerAvg, combined, weeks, tier, isPerfect };
+  }
+  var DEBUG = new URLSearchParams(location.search).has("debug");
+  var RESULT_LINES = [
+    { max: 3, line: "Dead on arrival — it never even charted." },
+    { max: 7, line: "One week of buzz, then total silence." },
+    { max: 11, line: "A niche playlist favorite. That's it." },
+    { max: 15, line: "Flash in the pan, forgotten by spring." },
+    { max: 19, line: "A respectable run. Nothing more." },
+    { max: 22, line: "Right on the edge of irrelevance." },
+    { max: 26, line: "The label has stopped returning your calls." },
+    { max: 29, line: "Management is “exploring other opportunities.”" },
+    { max: 33, line: "A genuinely good year. No complaints." },
+    { max: 37, line: "Certified hitmaker status." },
+    { max: 40, line: "Radio can't get enough." },
+    { max: 43, line: "Chart-topping, arena-selling, undeniable." },
+    { max: 46, line: "This is what a career peak sounds like." },
+    { max: 49, line: "One of the greatest years in music history." },
+    { max: 51, line: "So close to flawless it hurts." },
+    { max: 52, line: "Fifty-two weeks. Untouchable. A perfect record." }
+  ];
+  function resultLineFor(weeks) {
+    for (const bucket of RESULT_LINES) {
+      if (weeks <= bucket.max) return bucket.line;
+    }
+    return RESULT_LINES[RESULT_LINES.length - 1].line;
+  }
+  var STATS_KEY = "52-0-stats";
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STATS_KEY);
+      if (!raw) return { bestWeeks: null, gamesPlayed: 0 };
+      const parsed = JSON.parse(raw);
+      return {
+        bestWeeks: typeof parsed.bestWeeks === "number" ? parsed.bestWeeks : null,
+        gamesPlayed: typeof parsed.gamesPlayed === "number" ? parsed.gamesPlayed : 0
+      };
+    } catch (e) {
+      return { bestWeeks: null, gamesPlayed: 0 };
+    }
+  }
+  function saveStats(stats) {
+    try {
+      localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    } catch (e) {
+    }
   }
   const MIN_COMBO_ARTISTS = 3;
   function comboCountsFor(usedIds) {
@@ -13559,6 +13718,43 @@ html, body {
       )
     ) });
   }
+  const CONFETTI_COLORS = ["#e8b923", "#38bdf8", "#f3efe4", "#ff6b9d", "#a5871f"];
+  function generateConfetti(count) {
+    return Array.from({ length: count }, () => {
+      const duration = 2.2 + Math.random() * 1.8;
+      return {
+        left: Math.random() * 100,
+        size: 6 + Math.random() * 8,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        duration,
+        delay: Math.random() * 0.5,
+        dx: Math.round((Math.random() - 0.5) * 220),
+        dr: Math.round(180 + Math.random() * 540) * (Math.random() < 0.5 ? -1 : 1)
+      };
+    });
+  }
+  function Confetti() {
+    const [pieces] = useState(() => generateConfetti(80));
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "confetti-field", children: pieces.map(
+      (p, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "span",
+        {
+          className: "confetti-piece",
+          style: {
+            left: p.left + "%",
+            width: p.size + "px",
+            height: p.size * 0.4 + "px",
+            background: p.color,
+            animationDuration: p.duration + "s",
+            animationDelay: p.delay + "s",
+            "--dx": p.dx + "px",
+            "--dr": p.dr + "deg"
+          }
+        },
+        i
+      )
+    ) });
+  }
   function SlotReel({ label, options, finalValue, spinKey, onSettled }) {
     const [phase, setPhase] = useState("spinning");
     const [display, setDisplay] = useState(options[0]);
@@ -13585,12 +13781,24 @@ html, body {
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "slot-value " + (phase === "settled" ? "settled" : "spinning"), children: display })
     ] });
   }
-  function HomeScreen({ onPlay }) {
+  function HomeScreen({ onPlay, stats }) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteField, {}),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content screen-center", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { className: "brand", children: "52-0" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "tagline", children: "Can you draft a musical act that stays at #1 for an entire year?" }),
+        stats.gamesPlayed > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "stats-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "stat-chip", children: [
+            "BEST: ",
+            stats.bestWeeks,
+            "-",
+            52 - stats.bestWeeks
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "stat-chip", children: [
+            "Games Played: ",
+            stats.gamesPlayed
+          ] })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "stack", style: { marginTop: 34 }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: onPlay, children: "Play" }) }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "subtle", children: "Six rounds. A fresh era and genre every round. One shot at perfection." })
       ] })
@@ -13612,6 +13820,16 @@ html, body {
       "div",
       {
         className: "round-dot " + (i < usedCount ? "done" : i === usedCount ? "active" : "")
+      },
+      c.key
+    )) });
+  }
+  function CategoryChecklist({ assignments }) {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "cat-strip", children: CATEGORIES.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "div",
+      {
+        className: "cat-chip" + (assignments[c.key] ? " done" : ""),
+        children: c.label
       },
       c.key
     )) });
@@ -13711,6 +13929,7 @@ html, body {
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: bothSettled ? roll.decade : null, genre: roll.genre }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CategoryChecklist, { assignments }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roll-body", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-columns", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-col", children: [
@@ -13760,75 +13979,119 @@ html, body {
   }
   function ResultScreen({ result, onPlayAgain }) {
     const [displayWeeks, setDisplayWeeks] = useState(0);
+    const [spotlight, setSpotlight] = useState(false);
+    const [celebrate, setCelebrate] = useState(false);
+    const [shareState, setShareState] = useState("idle");
     useEffect(() => {
       const target = result.weeks;
-      if (target === 0) {
-        setDisplayWeeks(0);
+      setDisplayWeeks(0);
+      setSpotlight(false);
+      setCelebrate(false);
+      if (target === 0) return;
+      let cancelled = false;
+      let timeoutId = null;
+      function tick(n) {
+        if (cancelled) return;
+        setDisplayWeeks(n);
+        if (n === 51) setSpotlight(true);
+        if (n === 52) setCelebrate(true);
+        if (n >= target) return;
+        const delay = n === 51 ? 950 : 18 + Math.pow(n, 3) / 240;
+        timeoutId = setTimeout(() => tick(n + 1), delay);
+      }
+      timeoutId = setTimeout(() => tick(1), 18);
+      return () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
+    }, [result.weeks]);
+    function handleShare() {
+      const losses = 52 - result.weeks;
+      const shareUrl = location.origin + location.pathname;
+      const text = "I went " + result.weeks + "-" + losses + " in 52-0. Think you can beat me? " + shareUrl;
+      if (navigator.share) {
+        navigator.share({ text, url: shareUrl }).catch(() => {
+        });
         return;
       }
-      const duration = 900;
-      const start = performance.now();
-      let raf;
-      function tick(now) {
-        const t = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        setDisplayWeeks(Math.round(eased * target));
-        if (t < 1) raf = requestAnimationFrame(tick);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          setShareState("copied");
+          setTimeout(() => setShareState("idle"), 2e3);
+        }).catch(() => {
+        });
       }
-      raf = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(raf);
-    }, [result.weeks]);
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "screen", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { textAlign: "center", marginBottom: 10 }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "result-title", children: "Your artist went" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "record" + (result.isPerfect ? " perfect" : ""), children: [
-          displayWeeks,
-          "-",
-          52 - displayWeeks
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "weeks-line", children: [
-          result.weeks,
-          " WEEKS AT #1"
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "tier-tag", children: result.tier })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "roster", children: result.rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-main", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-cat", children: r.category }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-artist", children: r.artist.name })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-side", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "roster-tag", children: [
-            r.decade,
-            " \xB7 ",
-            r.genre
+    }
+    const isPerfectReveal = celebrate && result.isPerfect;
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
+      celebrate && result.isPerfect && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Confetti, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "spotlight-overlay" + (spotlight && !celebrate ? " active" : "") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { textAlign: "center", marginBottom: 10 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "result-title", children: "Your artist went" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "record" + (isPerfectReveal ? " perfect" : spotlight && !celebrate ? " spotlight" : ""), children: [
+            displayWeeks,
+            "-",
+            52 - displayWeeks
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-rating", children: r.rating })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "weeks-line", children: [
+            displayWeeks,
+            " WEEKS AT #1"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "tier-tag tier-" + result.tier.toLowerCase(), children: result.tier }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "result-quote", children: resultLineFor(result.weeks) })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "roster", children: result.rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-main", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-cat", children: r.category }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-artist", children: r.artist.name })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roster-side", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "roster-tag", children: [
+              r.decade,
+              " \xB7 ",
+              r.genre
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "roster-rating", children: r.rating })
+          ] })
+        ] }, r.category)) }),
+        DEBUG && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "meta-line", style: { textAlign: "center" }, children: [
+          "Core ",
+          result.core.toFixed(1),
+          " \xB7 Combined",
+          " ",
+          result.combined.toFixed(1)
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "stack", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: onPlayAgain, children: "Play again" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost btn-wide", onClick: handleShare, children: shareState === "copied" ? "Copied — go brag" : "Share your record" })
         ] })
-      ] }, r.category)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "meta-line", style: { textAlign: "center" }, children: [
-        "Core ",
-        result.core.toFixed(1),
-        " \xB7 Combined",
-        " ",
-        result.combined.toFixed(1)
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "stack", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: onPlayAgain, children: "Play again" }) })
-    ] }) });
+      ] })
+    ] });
   }
   function App() {
     const [stage, setStage] = useState("home");
     const [result, setResult] = useState(null);
     const [gameKey, setGameKey] = useState(0);
+    const [stats, setStats] = useState(() => loadStats());
     if (stage === "home") {
-      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HomeScreen, { onPlay: () => setStage("draft") });
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HomeScreen, { onPlay: () => setStage("draft"), stats });
     }
     if (stage === "draft") {
       return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
         DraftFlow,
         {
           onComplete: (assignments) => {
-            setResult(computeResult(assignments));
+            const nextResult = computeResult(assignments);
+            setResult(nextResult);
+            setStats((prev) => {
+              const next = {
+                bestWeeks: prev.bestWeeks === null ? nextResult.weeks : Math.max(prev.bestWeeks, nextResult.weeks),
+                gamesPlayed: prev.gamesPlayed + 1
+              };
+              saveStats(next);
+              return next;
+            });
             setStage("result");
           }
         },
