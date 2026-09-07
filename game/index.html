@@ -13596,7 +13596,7 @@ html, body {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "round-track", children: CATEGORIES.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
       "div",
       {
-        className: "round-dot " + (assignments[c.key] ? "done" : i === usedCount ? "active" : "")
+        className: "round-dot " + (i < usedCount ? "done" : i === usedCount ? "active" : "")
       },
       c.key
     )) });
