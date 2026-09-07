@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>52-0 — Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --ink: #0b0b10;
+  --ink-2: #16161f;
+  --ink-3: #202030;
+  --paper: #f3efe4;
+  --paper-dim: #b8b4a8;
+  --gold: #e8b923;
+  --gold-dim: #a5871f;
+  --magenta: #e23f86;
+  --magenta-dim: #7d2249;
+  --line: rgba(243, 239, 228, 0.12);
+  --font-display: "Anton", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); min-height: 100%; }
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
+.screen-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.numfield { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); opacity: 0.05; overflow: hidden; pointer-events: none; user-select: none; z-index: 0; }
+.numfield span { font-family: var(--font-display); font-size: 15vw; line-height: 1; color: var(--paper); text-align: center; padding: 4px 0; }
+.content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
+.brand { font-family: var(--font-display); letter-spacing: 0.01em; font-size: clamp(64px, 24vw, 130px); line-height: 0.85; color: var(--gold); text-shadow: 0 0 40px rgba(232, 185, 35, 0.25); margin: 0; }
+.tagline { font-size: 19px; line-height: 1.4; color: var(--paper); max-width: 320px; margin: 18px auto 0; font-weight: 500; }
+.subtle { color: var(--paper-dim); font-size: 14px; margin-top: 10px; }
+.btn { font-family: var(--font-body); font-weight: 700; font-size: 17px; border: none; border-radius: 999px; padding: 18px 40px; cursor: pointer; }
+.btn-primary { background: var(--magenta); color: var(--paper); box-shadow: 0 8px 24px rgba(226, 63, 134, 0.35); }
+.btn-wide { width: 100%; }
+.stack { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div id="root">
+  <!-- Current state, extracted from HomeScreen() in game/index.html. Feed this to superdesign_iterate with feedback (e.g. "fill the dead space above/below the hero, make the tagline feel more like a rules teaser, strengthen the numfield wallpaper so it doesn't look like a rendering glitch behind the glow"). -->
+  <div class="screen">
+    <div class="numfield">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+      <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+      <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+    </div>
+    <div class="content screen-center">
+      <h1 class="brand">52-0</h1>
+      <p class="tagline">Can you draft a musical act that stays at #1 for an entire year?</p>
+      <div class="stack" style="margin-top:34px">
+        <button class="btn btn-primary btn-wide">Play</button>
+      </div>
+      <p class="subtle">Six rounds. A fresh era and genre every round. One shot at perfection.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

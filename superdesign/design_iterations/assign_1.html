@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>52-0 — Assign Artist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --ink: #0b0b10; --ink-2: #16161f; --ink-3: #202030;
+  --paper: #f3efe4; --paper-dim: #b8b4a8;
+  --gold: #e8b923; --gold-dim: #a5871f;
+  --magenta: #e23f86; --magenta-dim: #7d2249;
+  --line: rgba(243, 239, 228, 0.12);
+  --font-display: "Anton", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); min-height: 100%; }
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
+.content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold); border-radius: 999px; padding: 6px 14px; }
+.round-track { display: flex; gap: 6px; margin: 4px 0 22px; }
+.round-dot { flex: 1; height: 5px; border-radius: 3px; background: var(--ink-3); }
+.round-dot.done { background: var(--gold); }
+.round-dot.active { background: var(--magenta); }
+.artist-card { background: linear-gradient(160deg, var(--ink-2), var(--ink-3)); border: 1px solid var(--line); border-radius: 22px; padding: 34px 22px; text-align: center; margin-bottom: 26px; }
+.artist-card-label { font-size: 12px; letter-spacing: 0.1em; color: var(--paper-dim); font-weight: 700; margin-bottom: 10px; }
+.artist-name { font-family: var(--font-display); font-size: clamp(34px, 9vw, 52px); line-height: 1.02; color: var(--paper); }
+.cat-grid { display: flex; flex-direction: column; gap: 10px; }
+.cat-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 16px 18px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--ink-2); color: var(--paper); font-family: var(--font-body); font-weight: 600; font-size: 16px; cursor: pointer; }
+.cat-btn.filled { background: transparent; border-color: var(--line); cursor: default; }
+.cat-btn.filled .cat-name { color: var(--paper-dim); }
+.cat-btn.filled .cat-artist { color: var(--gold); font-weight: 700; }
+.cat-name { font-size: 13px; letter-spacing: 0.06em; color: var(--paper-dim); font-weight: 700; }
+.cat-btn:not(.filled) .cat-name { color: var(--paper); font-size: 16px; letter-spacing: 0; }
+.cat-artist { font-size: 14px; text-align: right; }
+.arrow { color: var(--magenta); font-size: 18px; }
+</style>
+</head>
+<body>
+<div id="root">
+  <!-- Current state, extracted from ArtistAssignScreen() in game/index.html. This is the core decision point of the game: 6x per artist, the player must pick which of 6 stat categories (vocals, songwriting, production, discography, live performance, versatility) to slot this artist's rating into.
+       Known gap: the "Assign →" rows give ZERO preview of the artist's rating in that category before commit — so despite this being a stats-drafting game, the actual decision is made blind. Once assigned, the row only ever shows the artist's NAME, never the rating that was banked (you only see ratings later, on the result screen).
+       Feed to superdesign_iterate with feedback like: "show this artist's rating for each unfilled category inline on the row (not just after assignment), and show the banked rating next to the artist name once filled, so the player can make an informed strategic choice instead of a blind one." -->
+  <div class="screen">
+    <div class="content">
+      <div class="topbar">
+        <span class="pillbadge">2020s · FUNK</span>
+        <span class="pillbadge" style="background:var(--magenta);color:var(--paper)">Round 2/6</span>
+      </div>
+      <div class="round-track">
+        <div class="round-dot done"></div>
+        <div class="round-dot active"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+        <div class="round-dot"></div>
+      </div>
+      <div class="artist-card">
+        <div class="artist-card-label">Now drafting</div>
+        <div class="artist-name">Bruno Mars</div>
+      </div>
+      <div class="cat-grid">
+        <button class="cat-btn filled">
+          <span class="cat-name">Vocals</span>
+          <span class="cat-artist">Guns N' Roses</span>
+        </button>
+        <button class="cat-btn">
+          <span class="cat-name">Songwriting</span>
+          <span class="arrow">Assign →</span>
+        </button>
+        <button class="cat-btn">
+          <span class="cat-name">Production</span>
+          <span class="arrow">Assign →</span>
+        </button>
+        <button class="cat-btn">
+          <span class="cat-name">Discography</span>
+          <span class="arrow">Assign →</span>
+        </button>
+        <button class="cat-btn">
+          <span class="cat-name">Live Performance</span>
+          <span class="arrow">Assign →</span>
+        </button>
+        <button class="cat-btn">
+          <span class="cat-name">Versatility</span>
+          <span class="arrow">Assign →</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>52-0 — Result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --ink: #0b0b10; --ink-2: #16161f; --ink-3: #202030;
+  --paper: #f3efe4; --paper-dim: #b8b4a8;
+  --gold: #e8b923; --gold-dim: #a5871f;
+  --magenta: #e23f86; --magenta-dim: #7d2249;
+  --line: rgba(243, 239, 228, 0.12);
+  --font-display: "Anton", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); min-height: 100%; }
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
+.content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
+.btn { font-family: var(--font-body); font-weight: 700; font-size: 17px; border: none; border-radius: 999px; padding: 18px 40px; cursor: pointer; }
+.btn-primary { background: var(--magenta); color: var(--paper); box-shadow: 0 8px 24px rgba(226, 63, 134, 0.35); }
+.btn-wide { width: 100%; }
+.stack { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin: 0 auto; }
+.result-title { font-size: 13px; letter-spacing: 0.1em; font-weight: 700; color: var(--paper-dim); margin-bottom: 6px; }
+.record { font-family: var(--font-display); font-size: clamp(72px, 26vw, 150px); line-height: 0.9; margin: 6px 0 2px; background: linear-gradient(180deg, var(--gold), #fff6d9 40%, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 30px rgba(232, 185, 35, 0.35)); }
+.weeks-line { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; color: var(--paper); margin-bottom: 4px; }
+.tier-tag { display: inline-block; margin: 10px auto 26px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--paper); border-radius: 999px; padding: 7px 16px; }
+.roster { background: var(--ink-2); border: 1px solid var(--line); border-radius: 18px; padding: 6px 20px; margin-bottom: 22px; }
+.roster-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--line); gap: 12px; }
+.roster-row:last-child { border-bottom: none; }
+.roster-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.roster-cat { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--paper-dim); }
+.roster-artist { font-weight: 700; font-size: 15px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.roster-side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.roster-tag { font-size: 11px; color: var(--paper-dim); white-space: nowrap; }
+.roster-rating { font-family: var(--font-display); font-size: 20px; color: var(--gold); }
+.meta-line { color: var(--paper-dim); font-size: 13px; margin-bottom: 22px; }
+</style>
+</head>
+<body>
+<div id="root">
+  <!-- Current state, extracted from ResultScreen() in game/index.html.
+       Known gap: "Core / Star Power / Combined" (the .meta-line) is the ONLY explanation of how the score/scoring curve works, and it's rendered as small dim text below the roster — easy to miss, and doesn't explain the scoring model at all (e.g. why 96.5 combined = 37 weeks). Also every roster row shows the same gold color regardless of whether that particular rating was a weak link or a highlight, so there's no at-a-glance read on which pick to blame/credit.
+       Feed to superdesign_iterate with feedback like: "make the score breakdown legible enough to teach the scoring model on first read, and color/weight each roster row by how strong that rating was (e.g. dim vs bright gold) so the player can see their weak link at a glance." -->
+  <div class="screen">
+    <div class="content">
+      <div style="text-align:center;margin-bottom:10px">
+        <div class="result-title">Your artist went</div>
+        <div class="record">32-20</div>
+        <div class="weeks-line">37 WEEKS AT #1</div>
+        <div class="tier-tag">GOOD</div>
+      </div>
+      <div class="roster">
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Vocals</span>
+            <span class="roster-artist">Guns N' Roses</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">1990s · Rock</span>
+            <span class="roster-rating">96</span>
+          </div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Songwriting</span>
+            <span class="roster-artist">Bruno Mars</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">2020s · Funk</span>
+            <span class="roster-rating">94</span>
+          </div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Production</span>
+            <span class="roster-artist">Marvin Gaye</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">1980s · R&amp;B</span>
+            <span class="roster-rating">97</span>
+          </div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Discography</span>
+            <span class="roster-artist">Bob Dylan</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">1960s · Folk</span>
+            <span class="roster-rating">100</span>
+          </div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Live Performance</span>
+            <span class="roster-artist">Bob Marley &amp; The Wailers</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">1980s · Reggae</span>
+            <span class="roster-rating">100</span>
+          </div>
+        </div>
+        <div class="roster-row">
+          <div class="roster-main">
+            <span class="roster-cat">Versatility</span>
+            <span class="roster-artist">Elvis Presley</span>
+          </div>
+          <div class="roster-side">
+            <span class="roster-tag">1950s · Rock &amp; Roll</span>
+            <span class="roster-rating">90</span>
+          </div>
+        </div>
+      </div>
+      <div class="meta-line" style="text-align:center">Core 96.2 · Star Power 99.7 · Combined 96.5</div>
+      <div class="stack">
+        <button class="btn btn-primary btn-wide">Play again</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
