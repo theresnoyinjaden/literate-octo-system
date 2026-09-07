@@ -12,7 +12,8 @@
   --ink: #0b0b10; --ink-2: #16161f; --ink-3: #202030;
   --paper: #f3efe4; --paper-dim: #b8b4a8;
   --gold: #e8b923; --gold-dim: #a5871f;
-  --magenta: #e23f86; --magenta-dim: #7d2249;
+  --gold-shine: linear-gradient(135deg, #a5871f 0%, #f7dd8f 22%, #fff8e1 45%, #e8b923 62%, #fff3c4 80%, #a5871f 100%);
+  --magenta: #38bdf8; --magenta-dim: #1c6e8c;
   --line: rgba(243, 239, 228, 0.12);
   --font-display: "Anton", sans-serif;
   --font-body: "Space Grotesk", sans-serif;
@@ -22,10 +23,10 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
 .screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
 .content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold); border-radius: 999px; padding: 6px 14px; }
+.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold-shine); border-radius: 999px; padding: 6px 14px; }
 .round-track { display: flex; gap: 6px; margin: 4px 0 22px; }
 .round-dot { flex: 1; height: 5px; border-radius: 3px; background: var(--ink-3); }
-.round-dot.done { background: var(--gold); }
+.round-dot.done { background: var(--gold-shine); }
 .round-dot.active { background: var(--magenta); }
 .artist-card { background: linear-gradient(160deg, var(--ink-2), var(--ink-3)); border: 1px solid var(--line); border-radius: 22px; padding: 34px 22px; text-align: center; margin-bottom: 26px; }
 .artist-card-label { font-size: 12px; letter-spacing: 0.1em; color: var(--paper-dim); font-weight: 700; margin-bottom: 10px; }
@@ -34,7 +35,7 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
 .cat-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 16px 18px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--ink-2); color: var(--paper); font-family: var(--font-body); font-weight: 600; font-size: 16px; cursor: pointer; }
 .cat-btn.filled { background: transparent; border-color: var(--line); cursor: default; }
 .cat-btn.filled .cat-name { color: var(--paper-dim); }
-.cat-btn.filled .cat-artist { color: var(--gold); font-weight: 700; }
+.cat-btn.filled .cat-artist { background: var(--gold-shine); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
 .cat-name { font-size: 13px; letter-spacing: 0.06em; color: var(--paper-dim); font-weight: 700; }
 .cat-btn:not(.filled) .cat-name { color: var(--paper); font-size: 16px; letter-spacing: 0; }
 .cat-artist { font-size: 14px; text-align: right; }

@@ -17,8 +17,9 @@
   --paper-dim: #b8b4a8;
   --gold: #e8b923;
   --gold-dim: #a5871f;
-  --magenta: #e23f86;
-  --magenta-dim: #7d2249;
+  --gold-shine: linear-gradient(135deg, #a5871f 0%, #f7dd8f 22%, #fff8e1 45%, #e8b923 62%, #fff3c4 80%, #a5871f 100%);
+  --magenta: #38bdf8;
+  --magenta-dim: #1c6e8c;
   --line: rgba(243, 239, 228, 0.12);
   --font-display: "Anton", sans-serif;
   --font-body: "Space Grotesk", sans-serif;
@@ -98,9 +99,19 @@ html, body {
   letter-spacing: 0.01em;
   font-size: clamp(64px, 24vw, 130px);
   line-height: 0.85;
-  color: var(--gold);
-  text-shadow: 0 0 40px rgba(232, 185, 35, 0.25);
+  background: var(--gold-shine);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 40px rgba(232, 185, 35, 0.35));
+  animation: gold-shimmer 4s ease-in-out infinite;
   margin: 0;
+}
+
+@keyframes gold-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .tagline {
@@ -135,13 +146,34 @@ html, body {
 }
 
 .btn-primary {
-  background: var(--magenta);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--magenta) 0%, var(--magenta-dim) 130%);
   color: var(--paper);
-  box-shadow: 0 8px 24px rgba(226, 63, 134, 0.35);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 10px 30px rgba(226, 63, 134, 0.5);
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.55);
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: btn-shine 3.2s ease-in-out infinite;
+}
+
+@keyframes btn-shine {
+  0% { left: -60%; }
+  35% { left: 130%; }
+  100% { left: 130%; }
 }
 
 .btn-ghost {
@@ -162,6 +194,11 @@ html, body {
   cursor: default;
 }
 
+.btn:disabled::after {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
 .btn-wide {
   width: 100%;
 }
@@ -175,46 +212,20 @@ html, body {
   margin: 0 auto;
 }
 
-.step-label {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.14em;
-  color: var(--magenta);
-  margin-bottom: 6px;
-}
-
-.roll-value {
-  font-family: var(--font-display);
-  font-size: clamp(46px, 15vw, 84px);
-  line-height: 1;
-  color: var(--paper);
-  margin: 10px 0 6px;
-  min-height: 1.1em;
-}
-
-.roll-value.settled {
-  color: var(--gold);
-  animation: settle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.roll-value.spinning {
-  color: var(--paper-dim);
-}
-
 @keyframes settle-pop {
   0% { transform: scale(0.85); opacity: 0.4; }
   60% { transform: scale(1.08); }
   100% { transform: scale(1); opacity: 1; }
 }
 
-.roll-sub {
-  color: var(--paper-dim);
-  font-size: 14px;
-  margin-bottom: 30px;
+.roll-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 6px;
 }
 
-.slot-row {
+.slot-columns {
   display: flex;
   gap: 12px;
   width: 100%;
@@ -222,13 +233,19 @@ html, body {
   margin: 0 auto;
 }
 
-.slot-box {
+.slot-col {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-box {
   background: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 20px 10px;
+  padding: 16px 10px;
   text-align: center;
 }
 
@@ -244,24 +261,42 @@ html, body {
 
 .slot-value {
   font-family: var(--font-display);
-  font-size: clamp(22px, 7vw, 32px);
-  line-height: 1.1;
+  font-size: clamp(18px, 6vw, 26px);
+  line-height: 1.15;
   color: var(--paper-dim);
-  min-height: 1.1em;
-  overflow-wrap: break-word;
-}
-
-.slot-value.settled {
-  color: var(--gold);
-  animation: settle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.artist-reveal {
-  min-height: 64px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 26px 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.slot-value.settled {
+  background: var(--gold-shine);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: settle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), gold-shimmer 4s ease-in-out infinite;
+}
+
+.slot-col .btn {
+  padding: 12px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.artist-reveal {
+  height: 100px;
+  width: 100%;
+  max-width: 380px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 22px auto;
 }
 
 .artist-placeholder {
@@ -270,21 +305,6 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.reroll-row {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  max-width: 380px;
-  margin: 0 auto 14px;
-}
-
-.reroll-row .btn {
-  flex: 1;
-  padding: 14px 8px;
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 .topbar {
@@ -299,7 +319,7 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--ink);
-  background: var(--gold);
+  background: var(--gold-shine);
   border-radius: 999px;
   padding: 6px 14px;
 }
@@ -319,7 +339,7 @@ html, body {
 }
 
 .round-dot.done {
-  background: var(--gold);
+  background: var(--gold-shine);
 }
 
 .round-dot.active {
@@ -348,6 +368,12 @@ html, body {
   font-size: clamp(34px, 9vw, 52px);
   line-height: 1.02;
   color: var(--paper);
+}
+
+.artist-reveal .artist-name {
+  font-size: clamp(26px, 7vw, 40px);
+  line-height: 1.08;
+  overflow-wrap: break-word;
 }
 
 .artist-name.enter {
@@ -403,7 +429,10 @@ html, body {
 }
 
 .cat-btn.filled .cat-artist {
-  color: var(--gold);
+  background: var(--gold-shine);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   font-weight: 700;
 }
 
@@ -463,7 +492,7 @@ html, body {
 
 @keyframes perfect-glow {
   from { filter: drop-shadow(0 0 20px rgba(232, 185, 35, 0.4)); }
-  to { filter: drop-shadow(0 0 46px rgba(226, 63, 134, 0.55)); }
+  to { filter: drop-shadow(0 0 46px rgba(56, 189, 248, 0.55)); }
 }
 
 .weeks-line {
@@ -547,7 +576,10 @@ html, body {
 .roster-rating {
   font-family: var(--font-display);
   font-size: 20px;
-  color: var(--gold);
+  background: var(--gold-shine);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .meta-line {
@@ -13623,35 +13655,37 @@ html, body {
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: bothSettled ? roll.decade : null, genre: roll.genre }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen-center", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-row", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                SlotReel,
-                {
-                  label: "Your era",
-                  options: decadeOptionsFor(usedArtistIds),
-                  finalValue: roll.decade,
-                  spinKey: decadeSpinKey,
-                  onSettled: () => setDecadeSettled(true)
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                SlotReel,
-                {
-                  label: "Your genre",
-                  options: genreOptionsFor(usedArtistIds),
-                  finalValue: roll.genre,
-                  spinKey: genreSpinKey,
-                  onSettled: () => setGenreSettled(true)
-                }
-              )
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "roll-body", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-columns", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-col", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  SlotReel,
+                  {
+                    label: "Your era",
+                    options: decadeOptionsFor(usedArtistIds),
+                    finalValue: roll.decade,
+                    spinKey: decadeSpinKey,
+                    onSettled: () => setDecadeSettled(true)
+                  }
+                ),
+                decadeRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollDecade, disabled: !bothSettled, children: "Reroll era — 1 left" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "slot-col", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  SlotReel,
+                  {
+                    label: "Your genre",
+                    options: genreOptionsFor(usedArtistIds),
+                    finalValue: roll.genre,
+                    spinKey: genreSpinKey,
+                    onSettled: () => setGenreSettled(true)
+                  }
+                ),
+                genreRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollGenre, disabled: !bothSettled, children: "Reroll genre — 1 left" })
+              ] })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-reveal", children: bothSettled ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-name enter", children: roll.artist ? roll.artist.name : "—" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "artist-placeholder", children: "Rolling…" }) }),
-            (decadeRerollAvailable || genreRerollAvailable) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reroll-row", children: [
-              decadeRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollDecade, disabled: !bothSettled, children: "Reroll era — 1 left" }),
-              genreRerollAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-ghost", onClick: rerollGenre, disabled: !bothSettled, children: "Reroll genre — 1 left" })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "stack", style: { marginTop: 14 }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: () => setSubPhase("assign"), disabled: !bothSettled, children: "Accept" }) })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "stack", style: { marginTop: 6 }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "btn btn-primary btn-wide", onClick: () => setSubPhase("assign"), disabled: !bothSettled, children: "Accept" }) })
           ] })
         ] })
       ] });

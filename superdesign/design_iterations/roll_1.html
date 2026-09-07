@@ -12,7 +12,8 @@
   --ink: #0b0b10; --ink-2: #16161f; --ink-3: #202030;
   --paper: #f3efe4; --paper-dim: #b8b4a8;
   --gold: #e8b923; --gold-dim: #a5871f;
-  --magenta: #e23f86; --magenta-dim: #7d2249;
+  --gold-shine: linear-gradient(135deg, #a5871f 0%, #f7dd8f 22%, #fff8e1 45%, #e8b923 62%, #fff3c4 80%, #a5871f 100%);
+  --magenta: #38bdf8; --magenta-dim: #1c6e8c;
   --line: rgba(243, 239, 228, 0.12);
   --font-display: "Anton", sans-serif;
   --font-body: "Space Grotesk", sans-serif;
@@ -20,37 +21,44 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); min-height: 100%; }
 .screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
-.screen-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .numfield { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); opacity: 0.05; overflow: hidden; pointer-events: none; user-select: none; z-index: 0; }
 .numfield span { font-family: var(--font-display); font-size: 15vw; line-height: 1; color: var(--paper); text-align: center; padding: 4px 0; }
 .content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
 .btn { font-family: var(--font-body); font-weight: 700; font-size: 17px; border: none; border-radius: 999px; padding: 18px 40px; cursor: pointer; }
-.btn-primary { background: var(--magenta); color: var(--paper); box-shadow: 0 8px 24px rgba(226, 63, 134, 0.35); }
+.btn-primary { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--magenta) 0%, var(--magenta-dim) 130%); color: var(--paper); box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4); }
+.btn-primary::after { content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(115deg, transparent, rgba(255,255,255,0.6), transparent); transform: skewX(-20deg); animation: btn-shine 3.2s ease-in-out infinite; }
+@keyframes btn-shine { 0% { left: -60%; } 35% { left: 130%; } 100% { left: 130%; } }
 .btn-ghost { background: transparent; color: var(--paper-dim); border: 1.5px solid var(--line); padding: 14px 28px; font-size: 14px; }
 .btn:disabled { opacity: 0.35; cursor: default; }
 .btn-wide { width: 100%; }
 .stack { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 380px; margin: 0 auto; }
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold); border-radius: 999px; padding: 6px 14px; }
+.pillbadge { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink); background: var(--gold-shine); border-radius: 999px; padding: 6px 14px; }
 .round-track { display: flex; gap: 6px; margin: 4px 0 22px; }
 .round-dot { flex: 1; height: 5px; border-radius: 3px; background: var(--ink-3); }
-.round-dot.done { background: var(--gold); }
+.round-dot.done { background: var(--gold-shine); }
 .round-dot.active { background: var(--magenta); }
-.slot-row { display: flex; gap: 12px; width: 100%; max-width: 380px; margin: 0 auto; }
-.slot-box { flex: 1; min-width: 0; background: var(--ink-2); border: 1px solid var(--line); border-radius: 18px; padding: 20px 10px; text-align: center; }
+.roll-body { display: flex; flex-direction: column; align-items: center; margin-top: 6px; }
+.slot-columns { display: flex; gap: 12px; width: 100%; max-width: 380px; margin: 0 auto; }
+.slot-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.slot-box { background: var(--ink-2); border: 1px solid var(--line); border-radius: 18px; padding: 16px 10px; text-align: center; }
 .slot-label { font-family: var(--font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--magenta); margin-bottom: 10px; }
-.slot-value { font-family: var(--font-display); font-size: clamp(22px, 7vw, 32px); line-height: 1.1; color: var(--gold); min-height: 1.1em; overflow-wrap: break-word; }
-.artist-reveal { min-height: 64px; display: flex; align-items: center; justify-content: center; margin: 26px 0; }
-.artist-name { font-family: var(--font-display); font-size: clamp(34px, 9vw, 52px); line-height: 1.02; color: var(--paper); }
-.reroll-row { display: flex; gap: 10px; width: 100%; max-width: 380px; margin: 0 auto 14px; }
-.reroll-row .btn { flex: 1; padding: 14px 8px; font-size: 12px; white-space: nowrap; }
+.slot-value { font-family: var(--font-display); font-size: clamp(18px, 6vw, 26px); line-height: 1.15; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; background: var(--gold-shine); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.slot-col .btn { padding: 12px 8px; font-size: 12px; white-space: nowrap; }
+.artist-reveal { height: 100px; width: 100%; max-width: 380px; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; margin: 22px auto; }
+.artist-name { font-family: var(--font-display); font-size: clamp(26px, 7vw, 40px); line-height: 1.08; color: var(--paper); overflow-wrap: break-word; }
 </style>
 </head>
 <body>
 <div id="root">
-  <!-- Current state, extracted from DraftFlow()'s "roll" subPhase in game/index.html: era and genre now roll simultaneously as two side-by-side slot reels, settle independently, reveal the drafted artist below once both land, and each reel can be rerolled once per round.
-       Possible next round of polish: the two reels currently settle in lockstep visual weight — a staggered settle (genre landing a beat after era) or a per-reel "locking" sound/flash cue would sell the slot-machine metaphor harder. The artist reveal itself is a plain name with no entrance flourish beyond a fade — could earn the same celebratory treatment as the ResultScreen's number reveal. -->
+  <!-- Current state, extracted from DraftFlow()'s "roll" subPhase in game/index.html: era and genre roll simultaneously as two side-by-side slot reels, each sitting directly above its own reroll button (not a shared row below), settle independently, and reveal the drafted artist below once both land. Every box that displays cycling/variable-length text (.slot-value, .artist-reveal) has a FIXED height set in CSS -- this is load-bearing: during the spin, .slot-value shows random decade/genre strings of very different lengths every ~60ms (e.g. "Pop" vs "Progressive Rock"), and without a fixed height + overflow:hidden + flex-centered content, each tick reflows the box and visibly shakes everything below it (reroll buttons, artist reveal, Accept). Do not let an iteration reintroduce auto/min-height on these two elements.
+       Possible next round of polish: the two reels currently settle in lockstep visual weight — a staggered settle (genre landing a beat after era) or a per-reel "locking" flash cue would sell the slot-machine metaphor harder. -->
   <div class="screen">
+    <div class="numfield">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+      <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+      <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+    </div>
     <div class="content">
       <div class="topbar">
         <span class="pillbadge">2000s · PUNK ROCK</span>
@@ -64,25 +72,27 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
         <div class="round-dot"></div>
         <div class="round-dot"></div>
       </div>
-      <div class="screen-center">
-        <div class="slot-row">
-          <div class="slot-box">
-            <div class="slot-label">Your era</div>
-            <div class="slot-value">2000s</div>
+      <div class="roll-body">
+        <div class="slot-columns">
+          <div class="slot-col">
+            <div class="slot-box">
+              <div class="slot-label">Your era</div>
+              <div class="slot-value">2000s</div>
+            </div>
+            <button class="btn btn-ghost">Reroll era — 1 left</button>
           </div>
-          <div class="slot-box">
-            <div class="slot-label">Your genre</div>
-            <div class="slot-value">Punk Rock</div>
+          <div class="slot-col">
+            <div class="slot-box">
+              <div class="slot-label">Your genre</div>
+              <div class="slot-value">Punk Rock</div>
+            </div>
+            <button class="btn btn-ghost">Reroll genre — 1 left</button>
           </div>
         </div>
         <div class="artist-reveal">
           <div class="artist-name">Green Day</div>
         </div>
-        <div class="reroll-row">
-          <button class="btn btn-ghost">Reroll era — 1 left</button>
-          <button class="btn btn-ghost">Reroll genre — 1 left</button>
-        </div>
-        <div class="stack" style="margin-top:14px">
+        <div class="stack" style="margin-top:6px">
           <button class="btn btn-primary btn-wide">Accept</button>
         </div>
       </div>
