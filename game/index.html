@@ -13452,39 +13452,54 @@ html, body {
     else if (weeks >= 30) tier = "GOOD";
     return { rows, core, starPowerAvg, combined, weeks, tier, isPerfect };
   }
-  function decadeOptionsFor(usedIds) {
-    const decades = /* @__PURE__ */ new Set();
+  const MIN_COMBO_ARTISTS = 3;
+  function comboCountsFor(usedIds) {
+    const counts = /* @__PURE__ */ new Map();
     ARTISTS.forEach((a) => {
       if (usedIds.has(a.id)) return;
-      a.decades.forEach((d) => decades.add(d));
+      a.decades.forEach((d) => {
+        if (!counts.has(d)) counts.set(d, /* @__PURE__ */ new Map());
+        const genreCounts = counts.get(d);
+        a.genres.forEach((g) => genreCounts.set(g, (genreCounts.get(g) || 0) + 1));
+      });
     });
-    return Array.from(decades);
+    return counts;
+  }
+  function decadeOptionsFor(usedIds) {
+    const counts = comboCountsFor(usedIds);
+    const decades = [];
+    counts.forEach((genreCounts, decade) => {
+      for (const count of genreCounts.values()) {
+        if (count >= MIN_COMBO_ARTISTS) {
+          decades.push(decade);
+          break;
+        }
+      }
+    });
+    return decades;
   }
   function genreOptionsForDecade(decade, usedIds) {
-    const genres = /* @__PURE__ */ new Set();
-    ARTISTS.forEach((a) => {
-      if (usedIds.has(a.id)) return;
-      if (!a.decades.includes(decade)) return;
-      a.genres.forEach((g) => genres.add(g));
-    });
-    return Array.from(genres);
+    const genreCounts = comboCountsFor(usedIds).get(decade);
+    if (!genreCounts) return [];
+    return Array.from(genreCounts.entries()).filter(([, count]) => count >= MIN_COMBO_ARTISTS).map(([g]) => g);
   }
   function genreOptionsFor(usedIds) {
+    const counts = comboCountsFor(usedIds);
     const genres = /* @__PURE__ */ new Set();
-    ARTISTS.forEach((a) => {
-      if (usedIds.has(a.id)) return;
-      a.genres.forEach((g) => genres.add(g));
+    counts.forEach((genreCounts) => {
+      genreCounts.forEach((count, g) => {
+        if (count >= MIN_COMBO_ARTISTS) genres.add(g);
+      });
     });
     return Array.from(genres);
   }
   function decadeOptionsForGenre(genre, usedIds) {
-    const decades = /* @__PURE__ */ new Set();
-    ARTISTS.forEach((a) => {
-      if (usedIds.has(a.id)) return;
-      if (!a.genres.includes(genre)) return;
-      a.decades.forEach((d) => decades.add(d));
+    const counts = comboCountsFor(usedIds);
+    const decades = [];
+    counts.forEach((genreCounts, decade) => {
+      if ((genreCounts.get(genre) || 0) >= MIN_COMBO_ARTISTS) decades.push(decade);
     });
-    return Array.from(decades);
+    return decades;
   }
   function pickArtist(decade, genre, usedIds) {
     const candidates = ARTISTS.filter(
