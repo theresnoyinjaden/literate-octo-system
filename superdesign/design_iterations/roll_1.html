@@ -21,8 +21,8 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); min-height: 100%; }
 .screen { flex: 1; display: flex; flex-direction: column; min-height: 100vh; padding: 28px 20px 40px; position: relative; overflow-x: hidden; }
-.numfield { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); opacity: 0.05; overflow: hidden; pointer-events: none; user-select: none; z-index: 0; }
-.numfield span { font-family: var(--font-display); font-size: 15vw; line-height: 1; color: var(--paper); text-align: center; padding: 4px 0; }
+.notefield { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); opacity: 0.05; overflow: hidden; pointer-events: none; user-select: none; z-index: 0; }
+.notefield span { font-family: var(--font-display); font-size: 15vw; line-height: 1; color: var(--paper); text-align: center; padding: 4px 0; display: block; }
 .content { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; }
 .btn { font-family: var(--font-body); font-weight: 700; font-size: 17px; border: none; border-radius: 999px; padding: 18px 40px; cursor: pointer; }
 .btn-primary { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--magenta) 0%, var(--magenta-dim) 130%); color: var(--paper); box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4); }
@@ -54,10 +54,10 @@ html, body { margin: 0; padding: 0; background: var(--ink); color: var(--paper);
   <!-- Current state, extracted from DraftFlow()'s "roll" subPhase in game/index.html: era and genre roll simultaneously as two side-by-side slot reels, each sitting directly above its own reroll button (not a shared row below), settle independently, and reveal the drafted artist below once both land. Every box that displays cycling/variable-length text (.slot-value, .artist-reveal) has a FIXED height set in CSS -- this is load-bearing: during the spin, .slot-value shows random decade/genre strings of very different lengths every ~60ms (e.g. "Pop" vs "Progressive Rock"), and without a fixed height + overflow:hidden + flex-centered content, each tick reflows the box and visibly shakes everything below it (reroll buttons, artist reveal, Accept). Do not let an iteration reintroduce auto/min-height on these two elements.
        Possible next round of polish: the two reels currently settle in lockstep visual weight — a staggered settle (genre landing a beat after era) or a per-reel "locking" flash cue would sell the slot-machine metaphor harder. -->
   <div class="screen">
-    <div class="numfield">
-      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
-      <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
-      <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+    <div class="notefield">
+      <span style="transform:rotate(-14deg)">♪</span><span style="transform:rotate(-7deg)">♫</span><span style="transform:rotate(0deg)">♩</span><span style="transform:rotate(7deg)">♬</span><span style="transform:rotate(14deg)">♭</span><span style="transform:rotate(-14deg)">♯</span>
+      <span style="transform:rotate(-7deg)">♪</span><span style="transform:rotate(0deg)">♫</span><span style="transform:rotate(7deg)">♩</span><span style="transform:rotate(14deg)">♬</span><span style="transform:rotate(-14deg)">♭</span><span style="transform:rotate(-7deg)">♯</span>
+      <span style="transform:rotate(0deg)">♪</span><span style="transform:rotate(7deg)">♫</span><span style="transform:rotate(14deg)">♩</span><span style="transform:rotate(-14deg)">♬</span><span style="transform:rotate(-7deg)">♭</span><span style="transform:rotate(0deg)">♯</span>
     </div>
     <div class="content">
       <div class="topbar">

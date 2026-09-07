@@ -65,7 +65,7 @@ html, body {
   text-align: center;
 }
 
-.numfield {
+.notefield {
   position: absolute;
   inset: 0;
   display: grid;
@@ -77,7 +77,7 @@ html, body {
   z-index: 0;
 }
 
-.numfield span {
+.notefield span {
   font-family: var(--font-display);
   font-size: 15vw;
   line-height: 1;
@@ -13497,9 +13497,12 @@ html, body {
     const artist = pickArtist(decade, genre, usedIds);
     return { decade, genre, artist };
   }
-  function NumberField() {
-    const cells = Array.from({ length: 18 }, (_, i) => i % 26 + 1);
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "numfield", children: cells.map((n, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: n }, i)) });
+  const NOTE_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯"];
+  function NoteField() {
+    const cells = Array.from({ length: 18 }, (_, i) => NOTE_SYMBOLS[i % NOTE_SYMBOLS.length]);
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "notefield", children: cells.map(
+      (s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { transform: `rotate(${(i % 5 - 2) * 7}deg)` }, children: s }, i)
+    ) });
   }
   function SlotReel({ label, options, finalValue, spinKey, onSettled }) {
     const [phase, setPhase] = useState("spinning");
@@ -13529,7 +13532,7 @@ html, body {
   }
   function HomeScreen({ onPlay }) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumberField, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteField, {}),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content screen-center", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { className: "brand", children: "52-0" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "tagline", children: "Can you draft a musical act that stays at #1 for an entire year?" }),
@@ -13651,7 +13654,7 @@ html, body {
     }
     if (subPhase === "roll") {
       return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "screen", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumberField, {}),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteField, {}),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "content", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, { round, decade: bothSettled ? roll.decade : null, genre: roll.genre }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RoundTrack, { assignments }),
