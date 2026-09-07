@@ -68,9 +68,6 @@ html, body {
 .notefield {
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  opacity: 0.05;
   overflow: hidden;
   pointer-events: none;
   user-select: none;
@@ -78,12 +75,23 @@ html, body {
 }
 
 .notefield span {
+  position: absolute;
+  top: -14vh;
   font-family: var(--font-display);
-  font-size: 15vw;
   line-height: 1;
   color: var(--paper);
-  text-align: center;
-  padding: 4px 0;
+  animation-name: note-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes note-fall {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(var(--dx), 30vh) rotate(var(--dr)); }
+  50% { transform: translate(0, 58vh) rotate(0deg); }
+  75% { transform: translate(calc(var(--dx) * -1), 86vh) rotate(calc(var(--dr) * -1)); }
+  100% { transform: translate(0, 120vh) rotate(0deg); }
 }
 
 .content {
@@ -13498,10 +13506,40 @@ html, body {
     return { decade, genre, artist };
   }
   const NOTE_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯"];
+  function generateNotes(count) {
+    return Array.from({ length: count }, () => {
+      const duration = 16 + Math.random() * 16;
+      return {
+        symbol: NOTE_SYMBOLS[Math.floor(Math.random() * NOTE_SYMBOLS.length)],
+        left: Math.random() * 94,
+        size: 18 + Math.random() * 38,
+        opacity: 0.03 + Math.random() * 0.05,
+        duration,
+        delay: -Math.random() * duration,
+        dx: Math.round((30 + Math.random() * 60) * (Math.random() < 0.5 ? -1 : 1)),
+        dr: Math.round((10 + Math.random() * 35) * (Math.random() < 0.5 ? -1 : 1))
+      };
+    });
+  }
   function NoteField() {
-    const cells = Array.from({ length: 18 }, (_, i) => NOTE_SYMBOLS[i % NOTE_SYMBOLS.length]);
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "notefield", children: cells.map(
-      (s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { transform: `rotate(${(i % 5 - 2) * 7}deg)` }, children: s }, i)
+    const [notes] = useState(() => generateNotes(22));
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "notefield", children: notes.map(
+      (n, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "span",
+        {
+          style: {
+            left: n.left + "%",
+            fontSize: n.size + "px",
+            opacity: n.opacity,
+            animationDuration: n.duration + "s",
+            animationDelay: n.delay + "s",
+            "--dx": n.dx + "px",
+            "--dr": n.dr + "deg"
+          },
+          children: n.symbol
+        },
+        i
+      )
     ) });
   }
   function SlotReel({ label, options, finalValue, spinKey, onSettled }) {
