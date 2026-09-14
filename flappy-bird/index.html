@@ -107,11 +107,14 @@
 
   const START_BUTTON = { x: W / 2 - 85, y: H * 0.52, w: 170, h: 62 };
 
+  const CLOUD_COUNT = 5;
+  const SKY_HEIGHT = H - GROUND_HEIGHT;
+
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
   let state = "menu"; // "menu" | "ready" | "playing" | "dead"
-  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime;
+  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime, clouds;
 
   function getHighScore() {
     try {
@@ -147,8 +150,51 @@
     return { x, gapTop, gapBottom: gapTop + PIPE_GAP, passed: false };
   }
 
+  // Drifting background clouds — purely decorative, animate in every state.
+  function makeCloud(x) {
+    return {
+      x,
+      y: 30 + Math.random() * (SKY_HEIGHT * 0.6),
+      scale: 0.6 + Math.random() * 0.9,
+      speed: 8 + Math.random() * 16,
+      opacity: 0.5 + Math.random() * 0.4,
+    };
+  }
+  function initClouds() {
+    clouds = [];
+    for (let i = 0; i < CLOUD_COUNT; i++) {
+      clouds.push(makeCloud(Math.random() * W));
+    }
+  }
+  function updateClouds(dt) {
+    for (const c of clouds) {
+      c.x -= c.speed * dt;
+      const margin = 60 * c.scale;
+      if (c.x < -margin) {
+        Object.assign(c, makeCloud(W + margin), { x: W + margin });
+      }
+    }
+  }
+  function drawCloud(c) {
+    const s = c.scale;
+    ctx.globalAlpha = c.opacity;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(c.x - 18 * s, c.y + 4 * s, 14 * s, 0, Math.PI * 2);
+    ctx.arc(c.x + 18 * s, c.y + 4 * s, 14 * s, 0, Math.PI * 2);
+    ctx.arc(c.x, c.y - 6 * s, 18 * s, 0, Math.PI * 2);
+    ctx.arc(c.x - 34 * s, c.y + 8 * s, 10 * s, 0, Math.PI * 2);
+    ctx.arc(c.x + 34 * s, c.y + 8 * s, 10 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function drawClouds() {
+    for (const c of clouds) drawCloud(c);
+  }
+
   highScore = getHighScore();
   reset();
+  initClouds();
 
   // ---------------------------------------------------------------------
   // Input
@@ -463,6 +509,7 @@
 
   function update(dt) {
     groundOffset -= PIPE_SPEED * dt;
+    updateClouds(dt);
 
     if (state !== "playing") return;
 
@@ -501,6 +548,7 @@
   // ---------------------------------------------------------------------
   function render() {
     drawSky();
+    drawClouds();
 
     if (state === "menu") {
       drawGround();
