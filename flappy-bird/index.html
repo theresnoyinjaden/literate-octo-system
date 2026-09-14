@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
 <title>Flappy Hamey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet" />
 <style>
   :root {
     --sky-top: #4ec0e9;
@@ -106,6 +109,12 @@
   const HIGH_SCORE_KEY = "flappyIsraeliFlagsHighScore";
 
   const START_BUTTON = { x: W / 2 - 85, y: H * 0.52, w: 170, h: 62 };
+
+  const TITLE_FONT = '700 46px "Fredoka One", "Comic Sans MS", sans-serif';
+  const TITLE_TEXT = "Flappy Hamey";
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load(TITLE_FONT).catch(() => {});
+  }
 
   const CLOUD_COUNT = 5;
   const SKY_HEIGHT = H - GROUND_HEIGHT;
@@ -436,19 +445,87 @@
     ctx.closePath();
   }
 
-  function drawMenu() {
-    // Logo
+  // Offscreen canvas used to render the title's fill as a cloudy texture:
+  // the glyph shapes are used as a mask (via "source-in") for a puffy
+  // cloud pattern, so the letters look like they're made of clouds.
+  const TITLE_TEX_W = 320;
+  const TITLE_TEX_H = 76;
+  const titleCanvas = document.createElement("canvas");
+  titleCanvas.width = TITLE_TEX_W;
+  titleCanvas.height = TITLE_TEX_H;
+  const titleCtx = titleCanvas.getContext("2d");
+
+  function renderTitleTexture() {
+    const tw = TITLE_TEX_W;
+    const th = TITLE_TEX_H;
+    titleCtx.clearRect(0, 0, tw, th);
+
+    titleCtx.font = TITLE_FONT;
+    titleCtx.textAlign = "center";
+    titleCtx.textBaseline = "middle";
+    titleCtx.fillStyle = "#ffffff";
+    titleCtx.fillText(TITLE_TEXT, tw / 2, th / 2 + 2);
+
+    titleCtx.globalCompositeOperation = "source-in";
+
+    const sky = titleCtx.createLinearGradient(0, 0, 0, th);
+    sky.addColorStop(0, "#bfe3fb");
+    sky.addColorStop(1, "#ffffff");
+    titleCtx.fillStyle = sky;
+    titleCtx.fillRect(0, 0, tw, th);
+
+    // soft shaded puffs (depth)
+    titleCtx.fillStyle = "rgba(130,170,215,0.35)";
+    for (let i = 0; i < 12; i++) {
+      const px = (i * 47 + 14) % tw;
+      const py = th * 0.62 + Math.sin(i * 1.3) * th * 0.22;
+      titleCtx.beginPath();
+      titleCtx.arc(px, py, 9, 0, Math.PI * 2);
+      titleCtx.fill();
+    }
+
+    // bright fluffy puffs on top
+    titleCtx.fillStyle = "rgba(255,255,255,0.95)";
+    for (let i = 0; i < 16; i++) {
+      const px = (i * 31 + 8) % tw + Math.sin(i * 2.1) * 5;
+      const py = th * 0.4 + Math.cos(i * 1.9) * th * 0.28;
+      const r = 7 + (i % 3) * 3.5;
+      titleCtx.beginPath();
+      titleCtx.arc(px, py, r, 0, Math.PI * 2);
+      titleCtx.fill();
+    }
+
+    titleCtx.globalCompositeOperation = "source-over";
+  }
+
+  function drawTitle(cx, cy) {
+    renderTitleTexture();
+
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = TITLE_FONT;
+
+    // layered outline for a bold, bubbly pop
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 11;
+    ctx.strokeStyle = "#123a7a";
+    ctx.strokeText(TITLE_TEXT, cx, cy);
     ctx.lineWidth = 5;
     ctx.strokeStyle = "#ffffff";
-    ctx.fillStyle = FLAG_BLUE;
+    ctx.strokeText(TITLE_TEXT, cx, cy);
+
+    // cloudy texture fill
+    ctx.drawImage(titleCanvas, cx - TITLE_TEX_W / 2, cy - TITLE_TEX_H / 2, TITLE_TEX_W, TITLE_TEX_H);
+  }
+
+  function drawMenu() {
+    // Logo
     const logoY = H * 0.22;
-    ctx.strokeText("Flappy Hamey", W / 2, logoY);
-    ctx.fillText("Flappy Hamey", W / 2, logoY);
+    drawTitle(W / 2, logoY);
 
     // Subtitle
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.font = "13px sans-serif";
     ctx.fillStyle = "#111111";
     const subLines = wrapText("can you get Hamey back to his homeland?", 260);
