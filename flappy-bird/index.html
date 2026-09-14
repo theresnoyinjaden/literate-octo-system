@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>Flappy Hamey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sky-top: #4ec0e9;
+    --sky-bottom: #bdeef7;
+    --ground: #ded17e;
+    --ground-dark: #c4b263;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  #stage {
+    position: relative;
+    width: 360px;
+    max-width: 100vw;
+    aspect-ratio: 360 / 600;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: crisp-edges;
+  }
+  #hint {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="360" height="600"></canvas>
+    <div id="hint">tap / click / space to flap</div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const hint = document.getElementById("hint");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // ---------------------------------------------------------------------
+  // Bird placeholder image.
+  //
+  // Drop a transparent PNG at "assets/bird.png" (relative to this file)
+  // and it will automatically be used instead of the placeholder box the
+  // next time the page loads — no code changes needed. Recommended size
+  // is roughly square, ~64x64px, transparent background.
+  // ---------------------------------------------------------------------
+  const BIRD_IMAGE_SRC = "assets/bird.png";
+  const birdImg = new Image();
+  let birdImgReady = false;
+  birdImg.onload = () => { birdImgReady = true; };
+  birdImg.onerror = () => { birdImgReady = false; };
+  birdImg.src = BIRD_IMAGE_SRC;
+
+  // ---------------------------------------------------------------------
+  // Constants
+  // ---------------------------------------------------------------------
+  const GRAVITY = 1500;        // px/s^2
+  const FLAP_VELOCITY = -420;  // px/s
+  const MAX_FALL_SPEED = 700;
+  const PIPE_SPEED = 150;      // px/s
+  const PIPE_GAP = 165;
+  const PIPE_WIDTH = 68;
+  const PIPE_SPACING = 220;    // horizontal distance between pipe pairs
+  const GROUND_HEIGHT = 90;
+  const BIRD_SIZE = 32;
+  const BIRD_X = W * 0.3;
+
+  const FLAG_BLUE = "#0038b8";
+  const FLAG_WHITE = "#ffffff";
+
+  const HIGH_SCORE_KEY = "flappyIsraeliFlagsHighScore";
+  const WIN_SCORE = 100;
+  const HARD_MODE_SCORE = 80;
+
+  const START_BUTTON = { x: W / 2 - 85, y: H * 0.52, w: 170, h: 62 };
+
+  // ---------------------------------------------------------------------
+  // Zones — the ground/sky theme changes every 10 points as Hamey travels.
+  // ---------------------------------------------------------------------
+  const ZONES = [
+    { key: "farms", max: 10, skyTop: "#4ec0e9", skyBottom: "#bdeef7", ground: "#ded17e", accent: "#c4b263", sign: "Geelong Farms" },
+    { key: "classroom", max: 20, skyTop: "#8fa6c7", skyBottom: "#dde6f0", ground: "#d8dde3", accent: "#aebccb" },
+    { key: "parliament", max: 30, skyTop: "#5fb8e0", skyBottom: "#cdeaf7", ground: "#7fbf5a", accent: "#5fa23e" },
+    { key: "desert", max: 40, skyTop: "#f2b866", skyBottom: "#ffe1b0", ground: "#dba15a", accent: "#c1854a" },
+    { key: "house", max: 50, skyTop: "#7cc6ec", skyBottom: "#d4f0fb", ground: "#8fcf62", accent: "#6fae47", sign: "Hamer House & Wife" },
+    { key: "ocean", max: 70, skyTop: "#2f8fd1", skyBottom: "#a9dcf2", ground: "#1f6fae", accent: "#1a5c8f" },
+    { key: "strait", max: 80, skyTop: "#3a6b8c", skyBottom: "#8fb9cf", ground: "#2c5674", accent: "#224563" },
+    { key: "homestretch", max: WIN_SCORE, skyTop: "#4ec0e9", skyBottom: "#eaf7ff", ground: "#e8b923", accent: "#f4d35e" },
+  ];
+
+  function getZone(s) {
+    for (const zone of ZONES) {
+      if (s <= zone.max) return zone;
+    }
+    return ZONES[ZONES.length - 1];
+  }
+
+  function currentPipeSpeed() {
+    return score >= HARD_MODE_SCORE ? PIPE_SPEED * 1.35 : PIPE_SPEED;
+  }
+  function currentPipeGap() {
+    return score >= HARD_MODE_SCORE ? PIPE_GAP * 0.75 : PIPE_GAP;
+  }
+
+  const DEATH_CAPTIONS = [
+    "you aren't a real civil engineer",
+    "self hamering Hamer",
+    "Hamey got Hamed",
+    "tap to try again",
+  ];
+
+  const TITLE_FONT = '700 46px "Fredoka One", "Comic Sans MS", sans-serif';
+  const TITLE_TEXT = "Flappy Hamey";
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load(TITLE_FONT).catch(() => {});
+  }
+
+  const CLOUD_COUNT = 5;
+  const SKY_HEIGHT = H - GROUND_HEIGHT;
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+  let state = "menu"; // "menu" | "ready" | "playing" | "dead" | "won"
+  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime, clouds, confetti, deathCaption;
+
+  function getHighScore() {
+    try {
+      return parseInt(localStorage.getItem(HIGH_SCORE_KEY), 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function setHighScore(v) {
+    try { localStorage.setItem(HIGH_SCORE_KEY, String(v)); } catch (e) {}
+  }
+
+  function reset() {
+    bird = {
+      y: H / 2,
+      vy: 0,
+      rotation: 0,
+    };
+    pipes = [];
+    score = 0;
+    groundOffset = 0;
+    let x = W + 100;
+    for (let i = 0; i < 4; i++) {
+      pipes.push(makePipe(x));
+      x += PIPE_SPACING;
+    }
+  }
+
+  function makePipe(x) {
+    const gap = currentPipeGap();
+    const margin = 60;
+    const usable = H - GROUND_HEIGHT - gap - margin * 2;
+    const gapTop = margin + Math.random() * Math.max(usable, 0);
+    return { x, gapTop, gapBottom: gapTop + gap, passed: false };
+  }
+
+  // Drifting background clouds — purely decorative, animate in every state.
+  function makeCloud(x) {
+    return {
+      x,
+      y: 30 + Math.random() * (SKY_HEIGHT * 0.6),
+      scale: 0.6 + Math.random() * 0.9,
+      speed: 8 + Math.random() * 16,
+      opacity: 0.5 + Math.random() * 0.4,
+    };
+  }
+  function initClouds() {
+    clouds = [];
+    for (let i = 0; i < CLOUD_COUNT; i++) {
+      clouds.push(makeCloud(Math.random() * W));
+    }
+  }
+  function updateClouds(dt) {
+    for (const c of clouds) {
+      c.x -= c.speed * dt;
+      const margin = 60 * c.scale;
+      if (c.x < -margin) {
+        Object.assign(c, makeCloud(W + margin), { x: W + margin });
+      }
+    }
+  }
+  function drawCloud(c) {
+    const s = c.scale;
+    ctx.globalAlpha = c.opacity;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(c.x - 18 * s, c.y + 4 * s, 14 * s, 0, Math.PI * 2);
+    ctx.arc(c.x + 18 * s, c.y + 4 * s, 14 * s, 0, Math.PI * 2);
+    ctx.arc(c.x, c.y - 6 * s, 18 * s, 0, Math.PI * 2);
+    ctx.arc(c.x - 34 * s, c.y + 8 * s, 10 * s, 0, Math.PI * 2);
+    ctx.arc(c.x + 34 * s, c.y + 8 * s, 10 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function drawClouds() {
+    for (const c of clouds) drawCloud(c);
+  }
+
+  // Celebration confetti, spawned when Hamey reaches Israel.
+  const CONFETTI_COLORS = [FLAG_BLUE, "#ffffff", "#f5c518"];
+  function spawnConfetti() {
+    confetti = [];
+    for (let i = 0; i < 70; i++) {
+      confetti.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * H,
+        vx: (Math.random() - 0.5) * 50,
+        vy: 70 + Math.random() * 90,
+        size: 4 + Math.random() * 5,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 6,
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      });
+    }
+  }
+  function updateConfetti(dt) {
+    for (const p of confetti) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rotation += p.rotSpeed * dt;
+      if (p.y > H + 10) {
+        p.y = -10;
+        p.x = Math.random() * W;
+      }
+    }
+  }
+  function drawConfetti() {
+    for (const p of confetti) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+  }
+
+  highScore = getHighScore();
+  reset();
+  initClouds();
+
+  // ---------------------------------------------------------------------
+  // Input
+  // ---------------------------------------------------------------------
+  function startGame() {
+    reset();
+    state = "ready";
+  }
+
+  function flap() {
+    if (state === "ready") {
+      state = "playing";
+      bird.vy = FLAP_VELOCITY;
+    } else if (state === "playing") {
+      bird.vy = FLAP_VELOCITY;
+    } else if (state === "dead" || state === "won") {
+      if (performance.now() - deathTime > 400) {
+        startGame();
+      }
+    }
+  }
+
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (W / rect.width),
+      y: (e.clientY - rect.top) * (H / rect.height),
+    };
+  }
+
+  function pointInRect(p, r) {
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter") {
+      e.preventDefault();
+      if (state === "menu") {
+        startGame();
+      } else {
+        flap();
+      }
+    }
+  });
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (state === "menu") {
+      const pos = getCanvasPos(e);
+      if (pointInRect(pos, START_BUTTON)) {
+        startGame();
+      }
+      return;
+    }
+    flap();
+  });
+
+  // ---------------------------------------------------------------------
+  // Drawing helpers
+  // ---------------------------------------------------------------------
+  function drawSky() {
+    const zone = getZone(score);
+    const g = ctx.createLinearGradient(0, 0, 0, H - GROUND_HEIGHT);
+    g.addColorStop(0, zone.skyTop);
+    g.addColorStop(1, zone.skyBottom);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H - GROUND_HEIGHT);
+
+    const groundY = H - GROUND_HEIGHT;
+    if (zone.key === "parliament") {
+      drawFlagpole(W * 0.78, groundY);
+    } else if (zone.key === "strait") {
+      const period = 260;
+      for (let sx = -70 + (groundOffset % period); sx < W + 70; sx += period) {
+        drawTanker(sx, groundY - 30);
+      }
+    }
+  }
+
+  function drawFlagpole(x, groundY) {
+    ctx.strokeStyle = "#555555";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, groundY);
+    ctx.lineTo(x, groundY - 70);
+    ctx.stroke();
+    ctx.fillStyle = "#cccccc";
+    ctx.fillRect(x, groundY - 66, 18, 12);
+  }
+
+  function drawTanker(x, y) {
+    ctx.fillStyle = "rgba(20,30,40,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 60, y);
+    ctx.lineTo(x + 52, y + 14);
+    ctx.lineTo(x + 8, y + 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(x + 10, y - 10, 10, 10);
+  }
+
+  // A small wooden sign that scrolls by with the ground, used by zones
+  // that call out a specific place name (e.g. "Geelong Farms").
+  function drawSignAt(x, y, text) {
+    ctx.font = "bold 9px sans-serif";
+    const textW = ctx.measureText(text).width;
+    const plankW = textW + 16;
+    ctx.fillStyle = "#8a5a2b";
+    ctx.fillRect(x - 3, y - 30, 6, 32);
+    ctx.fillRect(x - 3 + (plankW - 12), y - 30, 6, 32);
+    ctx.fillStyle = "#c8935a";
+    ctx.strokeStyle = "#6b4423";
+    ctx.lineWidth = 2;
+    ctx.fillRect(x - 8, y - 46, plankW, 22);
+    ctx.strokeRect(x - 8, y - 46, plankW, 22);
+    ctx.fillStyle = "#3a2415";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x - 8 + plankW / 2, y - 35);
+  }
+  function drawScrollingSign(text, y) {
+    if (!text) return;
+    const period = 280;
+    for (let sx = -80 + (groundOffset % period); sx < W + 80; sx += period) {
+      drawSignAt(sx, y, text);
+    }
+  }
+
+  function drawGroundCap(y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, y, W, 10);
+  }
+
+  function drawFarmsGround(y, zone) {
+    drawGroundCap(y, "#8ac53f");
+    ctx.fillStyle = zone.accent;
+    const stripeW = 24;
+    for (let x = -stripeW + (groundOffset % stripeW); x < W; x += stripeW) {
+      ctx.fillRect(x, y + 14, stripeW / 2, GROUND_HEIGHT - 14);
+    }
+    drawScrollingSign(zone.sign, y);
+  }
+
+  function drawClassroomGround(y, zone) {
+    ctx.fillStyle = "#5b7089";
+    ctx.fillRect(0, y, W, 4);
+    ctx.strokeStyle = zone.accent;
+    ctx.lineWidth = 1;
+    const grid = 18;
+    for (let x = -grid + (groundOffset % grid); x < W; x += grid) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let ly = y + 16; ly < H; ly += grid) {
+      ctx.beginPath();
+      ctx.moveTo(0, ly);
+      ctx.lineTo(W, ly);
+      ctx.stroke();
+    }
+  }
+
+  function drawParliamentGround(y, zone) {
+    drawGroundCap(y, "#a8d98a");
+    ctx.fillStyle = zone.accent;
+    const bandW = 30;
+    for (let x = -bandW + (groundOffset % (bandW * 2)); x < W; x += bandW * 2) {
+      ctx.fillRect(x, y + 10, bandW, GROUND_HEIGHT - 10);
+    }
+  }
+
+  function drawDesertGround(y, zone) {
+    ctx.fillStyle = zone.accent;
+    ctx.beginPath();
+    ctx.moveTo(0, y + 18);
+    for (let x = 0; x <= W; x += 20) {
+      const phase = (x + groundOffset) * 0.05;
+      ctx.lineTo(x, y + 18 + Math.sin(phase) * 6);
+    }
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(120,70,30,0.4)";
+    const period = 90;
+    for (let x = -20 + (groundOffset % period); x < W; x += period) {
+      ctx.beginPath();
+      ctx.arc(x, y + 40, 7, 0, Math.PI * 2);
+      ctx.arc(x + 12, y + 42, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawHouseGround(y, zone) {
+    drawGroundCap(y, "#6fae47");
+    const period = 18;
+    ctx.fillStyle = "#f4f4f4";
+    ctx.strokeStyle = "#c9c9c9";
+    ctx.lineWidth = 1;
+    for (let x = -period + (groundOffset % period); x < W; x += period) {
+      ctx.fillRect(x, y - 14, 8, 22);
+      ctx.strokeRect(x, y - 14, 8, 22);
+    }
+    drawScrollingSign(zone.sign, y);
+  }
+
+  function drawWaterGround(y, zone) {
+    for (let i = 0; i < 4; i++) {
+      const waveY = y + 8 + i * 18;
+      ctx.beginPath();
+      ctx.moveTo(0, waveY);
+      for (let x = 0; x <= W; x += 16) {
+        const phase = (x + groundOffset * (1 + i * 0.2)) * 0.08 + i;
+        ctx.lineTo(x, waveY + Math.sin(phase) * 4);
+      }
+      ctx.lineTo(W, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fillStyle = zone.accent;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawHomestretchGround(y, zone) {
+    drawGroundCap(y, "#f4d35e");
+    ctx.strokeStyle = "#cccccc";
+    ctx.beginPath();
+    ctx.moveTo(0, y + 6);
+    ctx.lineTo(W, y + 6);
+    ctx.stroke();
+
+    const period = 40;
+    let i = 0;
+    for (let x = -period + (groundOffset % period); x < W; x += period, i++) {
+      ctx.fillStyle = i % 2 === 0 ? FLAG_BLUE : "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(x, y + 6);
+      ctx.lineTo(x + period / 2, y + 6);
+      ctx.lineTo(x + period / 4, y + 22);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawGround() {
+    const zone = getZone(score);
+    const y = H - GROUND_HEIGHT;
+
+    ctx.fillStyle = zone.ground;
+    ctx.fillRect(0, y, W, GROUND_HEIGHT);
+
+    switch (zone.key) {
+      case "farms":
+        drawFarmsGround(y, zone);
+        break;
+      case "classroom":
+        drawClassroomGround(y, zone);
+        break;
+      case "parliament":
+        drawParliamentGround(y, zone);
+        break;
+      case "desert":
+        drawDesertGround(y, zone);
+        break;
+      case "house":
+        drawHouseGround(y, zone);
+        break;
+      case "ocean":
+      case "strait":
+        drawWaterGround(y, zone);
+        break;
+      case "homestretch":
+        drawHomestretchGround(y, zone);
+        break;
+    }
+  }
+
+  // Draws a Star of David (hexagram) centered at (cx, cy).
+  function drawStarOfDavid(cx, cy, r, color, lineWidth) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = "miter";
+
+    function triangle(rotationDeg) {
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const angle = (Math.PI / 180) * (rotationDeg + i * 120 - 90);
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    triangle(0);
+    triangle(60);
+  }
+
+  // Draws one pipe segment (top or bottom half of a pipe pair) styled
+  // after the Israeli flag: white field, two blue horizontal stripes,
+  // and (space permitting) a blue Star of David.
+  function drawFlagPipe(x, y, width, height, capAtBottom) {
+    if (height <= 0) return;
+
+    // White field
+    ctx.fillStyle = FLAG_WHITE;
+    ctx.fillRect(x, y, width, height);
+
+    const stripeH = Math.max(5, Math.min(16, height * 0.14));
+
+    // Two blue stripes near the outer edges of the pipe
+    ctx.fillStyle = FLAG_BLUE;
+    ctx.fillRect(x, y + height * 0.14, width, stripeH);
+    ctx.fillRect(x, y + height * 0.86 - stripeH, width, stripeH);
+
+    // Star of David centered in the remaining space, if there's room
+    const starR = Math.min(width, height) * 0.26;
+    if (height > 70 && starR > 6) {
+      drawStarOfDavid(x + width / 2, y + height / 2, starR, FLAG_BLUE, Math.max(1.5, starR * 0.12));
+    }
+
+    // Pipe border + cap (like classic flappy-bird pipes) for readability
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    const capH = 22;
+    const capOverhang = 5;
+    ctx.fillStyle = FLAG_WHITE;
+    if (capAtBottom) {
+      ctx.fillRect(x - capOverhang, y + height - capH, width + capOverhang * 2, capH);
+      ctx.strokeRect(x - capOverhang, y + height - capH, width + capOverhang * 2, capH);
+    } else {
+      ctx.fillRect(x - capOverhang, y, width + capOverhang * 2, capH);
+      ctx.strokeRect(x - capOverhang, y, width + capOverhang * 2, capH);
+    }
+  }
+
+  function drawBird() {
+    ctx.save();
+    ctx.translate(BIRD_X, bird.y);
+    ctx.rotate(bird.rotation);
+
+    if (birdImgReady) {
+      ctx.drawImage(birdImg, -BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+    } else {
+      // Placeholder box: swap in assets/bird.png to replace this.
+      ctx.fillStyle = "#ffcc33";
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.lineWidth = 2;
+      ctx.fillRect(-BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+      ctx.strokeRect(-BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+
+      ctx.fillStyle = "#1a1a1a";
+      ctx.font = "bold 8px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("BIRD", 0, 1);
+    }
+    ctx.restore();
+  }
+
+  function drawScore() {
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 4;
+    ctx.font = "bold 40px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.strokeText(String(score), W / 2, 20);
+    ctx.fillText(String(score), W / 2, 20);
+  }
+
+  function wrapText(text, maxWidth) {
+    const words = text.split(" ");
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function drawButton(r, label) {
+    const radius = 14;
+    ctx.save();
+
+    // drop shadow / 3D base
+    ctx.fillStyle = "#0a2a7a";
+    roundedRectPath(r.x, r.y + 6, r.w, r.h, radius);
+    ctx.fill();
+
+    // button face
+    const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+    g.addColorStop(0, "#1e5be0");
+    g.addColorStop(1, FLAG_BLUE);
+    ctx.fillStyle = g;
+    roundedRectPath(r.x, r.y, r.w, r.h, radius);
+    ctx.fill();
+
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 3;
+    roundedRectPath(r.x, r.y, r.w, r.h, radius);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 2;
+    ctx.font = "bold 26px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeText(label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+
+    ctx.restore();
+  }
+
+  function roundedRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Offscreen canvas used to render the title's fill as a cloudy texture:
+  // the glyph shapes are used as a mask (via "source-in") for a puffy
+  // cloud pattern, so the letters look like they're made of clouds.
+  const TITLE_TEX_W = 320;
+  const TITLE_TEX_H = 76;
+  const titleCanvas = document.createElement("canvas");
+  titleCanvas.width = TITLE_TEX_W;
+  titleCanvas.height = TITLE_TEX_H;
+  const titleCtx = titleCanvas.getContext("2d");
+
+  function fitTitleFont(text, maxWidth, baseSize) {
+    let size = baseSize;
+    let font;
+    do {
+      font = `700 ${size}px "Fredoka One", "Comic Sans MS", sans-serif`;
+      titleCtx.font = font;
+      if (titleCtx.measureText(text).width <= maxWidth || size <= 22) break;
+      size -= 2;
+    } while (true);
+    return font;
+  }
+
+  function renderTitleTexture(text, font) {
+    const tw = TITLE_TEX_W;
+    const th = TITLE_TEX_H;
+    titleCtx.clearRect(0, 0, tw, th);
+
+    titleCtx.font = font;
+    titleCtx.textAlign = "center";
+    titleCtx.textBaseline = "middle";
+    titleCtx.fillStyle = "#ffffff";
+    titleCtx.fillText(text, tw / 2, th / 2 + 2);
+
+    titleCtx.globalCompositeOperation = "source-in";
+
+    const sky = titleCtx.createLinearGradient(0, 0, 0, th);
+    sky.addColorStop(0, "#bfe3fb");
+    sky.addColorStop(1, "#ffffff");
+    titleCtx.fillStyle = sky;
+    titleCtx.fillRect(0, 0, tw, th);
+
+    // soft shaded puffs (depth)
+    titleCtx.fillStyle = "rgba(130,170,215,0.35)";
+    for (let i = 0; i < 12; i++) {
+      const px = (i * 47 + 14) % tw;
+      const py = th * 0.62 + Math.sin(i * 1.3) * th * 0.22;
+      titleCtx.beginPath();
+      titleCtx.arc(px, py, 9, 0, Math.PI * 2);
+      titleCtx.fill();
+    }
+
+    // bright fluffy puffs on top
+    titleCtx.fillStyle = "rgba(255,255,255,0.95)";
+    for (let i = 0; i < 16; i++) {
+      const px = (i * 31 + 8) % tw + Math.sin(i * 2.1) * 5;
+      const py = th * 0.4 + Math.cos(i * 1.9) * th * 0.28;
+      const r = 7 + (i % 3) * 3.5;
+      titleCtx.beginPath();
+      titleCtx.arc(px, py, r, 0, Math.PI * 2);
+      titleCtx.fill();
+    }
+
+    titleCtx.globalCompositeOperation = "source-over";
+  }
+
+  function drawTitle(text, cx, cy, baseSize) {
+    const font = fitTitleFont(text, TITLE_TEX_W - 20, baseSize || 46);
+    renderTitleTexture(text, font);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = font;
+
+    // layered outline for a bold, bubbly pop
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 11;
+    ctx.strokeStyle = "#123a7a";
+    ctx.strokeText(text, cx, cy);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#ffffff";
+    ctx.strokeText(text, cx, cy);
+
+    // cloudy texture fill
+    ctx.drawImage(titleCanvas, cx - TITLE_TEX_W / 2, cy - TITLE_TEX_H / 2, TITLE_TEX_W, TITLE_TEX_H);
+  }
+
+  function drawMenu() {
+    // Logo
+    const logoY = H * 0.22;
+    drawTitle(TITLE_TEXT, W / 2, logoY);
+
+    // Subtitle
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "13px sans-serif";
+    ctx.fillStyle = "#111111";
+    const subLines = wrapText("can you get Hamey back to his homeland?", 260);
+    subLines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, logoY + 32 + i * 18);
+    });
+
+    drawButton(START_BUTTON, "START");
+  }
+
+  function drawCenteredPanel(lines) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    const panelW = 260;
+    const panelH = 40 + lines.length * 34;
+    const px = (W - panelW) / 2;
+    const py = (H - panelH) / 2;
+    ctx.fillRect(px, py, panelW, panelH);
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, panelW, panelH);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    lines.forEach((line, i) => {
+      ctx.font = line.font || "16px sans-serif";
+      ctx.fillStyle = line.color || "#ffffff";
+      ctx.fillText(line.text, W / 2, py + 30 + i * 34);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------------------
+  function birdBox() {
+    return {
+      left: BIRD_X - BIRD_SIZE / 2 + 4,
+      right: BIRD_X + BIRD_SIZE / 2 - 4,
+      top: bird.y - BIRD_SIZE / 2 + 4,
+      bottom: bird.y + BIRD_SIZE / 2 - 4,
+    };
+  }
+
+  function checkCollision() {
+    const b = birdBox();
+
+    if (b.bottom >= H - GROUND_HEIGHT) return true;
+    if (b.top <= 0) return true;
+
+    for (const pipe of pipes) {
+      if (b.right > pipe.x && b.left < pipe.x + PIPE_WIDTH) {
+        if (b.top < pipe.gapTop || b.bottom > pipe.gapBottom) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function update(dt) {
+    groundOffset -= currentPipeSpeed() * dt;
+    updateClouds(dt);
+
+    if (state === "won") {
+      updateConfetti(dt);
+      return;
+    }
+    if (state !== "playing") return;
+
+    bird.vy += GRAVITY * dt;
+    if (bird.vy > MAX_FALL_SPEED) bird.vy = MAX_FALL_SPEED;
+    bird.y += bird.vy * dt;
+
+    bird.rotation = Math.max(-0.5, Math.min(1.3, bird.vy / 500));
+
+    const pipeSpeed = currentPipeSpeed();
+    for (const pipe of pipes) {
+      pipe.x -= pipeSpeed * dt;
+      if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X) {
+        pipe.passed = true;
+        score++;
+        if (score >= WIN_SCORE) {
+          state = "won";
+          deathTime = performance.now();
+          if (score > highScore) {
+            highScore = score;
+            setHighScore(highScore);
+          }
+          spawnConfetti();
+          return;
+        }
+      }
+    }
+
+    while (pipes.length && pipes[0].x + PIPE_WIDTH < -50) {
+      pipes.shift();
+      const lastX = pipes[pipes.length - 1].x;
+      pipes.push(makePipe(lastX + PIPE_SPACING));
+    }
+
+    if (checkCollision()) {
+      state = "dead";
+      deathTime = performance.now();
+      deathCaption = DEATH_CAPTIONS[Math.floor(Math.random() * DEATH_CAPTIONS.length)];
+      if (score > highScore) {
+        highScore = score;
+        setHighScore(highScore);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------
+  function render() {
+    drawSky();
+    drawClouds();
+
+    if (state === "menu") {
+      drawGround();
+      drawMenu();
+      hint.style.visibility = "hidden";
+      return;
+    }
+    hint.style.visibility = "visible";
+
+    for (const pipe of pipes) {
+      drawFlagPipe(pipe.x, 0, PIPE_WIDTH, pipe.gapTop, true);
+      drawFlagPipe(pipe.x, pipe.gapBottom, PIPE_WIDTH, (H - GROUND_HEIGHT) - pipe.gapBottom, false);
+    }
+
+    drawGround();
+    drawBird();
+    drawScore();
+
+    if (state === "ready") {
+      drawCenteredPanel([
+        { text: "Get Ready", font: "bold 24px sans-serif" },
+        { text: "tap / click / space to flap", font: "13px sans-serif" },
+      ]);
+    } else if (state === "dead") {
+      drawCenteredPanel([
+        { text: "Game Over", font: "bold 26px sans-serif", color: "#ff6b6b" },
+        { text: "Score: " + score, font: "18px sans-serif" },
+        { text: "Best: " + highScore, font: "14px sans-serif", color: "#bdeef7" },
+        { text: deathCaption, font: "13px sans-serif" },
+      ]);
+    } else if (state === "won") {
+      drawConfetti();
+      drawTitle("Hamey is Home!", W / 2, H * 0.24, 40);
+      drawCenteredPanel([
+        { text: "Hamey made it to Israel!", font: "bold 16px sans-serif", color: "#ffffff" },
+        { text: "and is celebrating!", font: "13px sans-serif", color: "#bdeef7" },
+        { text: "Score: " + score, font: "16px sans-serif" },
+        { text: "tap to play again", font: "13px sans-serif" },
+      ]);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Main loop
+  // ---------------------------------------------------------------------
+  function frame(time) {
+    if (lastTime === undefined) lastTime = time;
+    let dt = (time - lastTime) / 1000;
+    dt = Math.min(dt, 1 / 30); // clamp on tab-switch lag spikes
+    lastTime = time;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
