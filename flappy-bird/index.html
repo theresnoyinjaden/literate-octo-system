@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-<title>Flappy Bird — Israeli Flag Edition</title>
+<title>Flappy Hamey</title>
 <style>
   :root {
     --sky-top: #4ec0e9;
@@ -67,6 +67,7 @@
 
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
+  const hint = document.getElementById("hint");
   const W = canvas.width;
   const H = canvas.height;
 
@@ -104,10 +105,12 @@
 
   const HIGH_SCORE_KEY = "flappyIsraeliFlagsHighScore";
 
+  const START_BUTTON = { x: W / 2 - 85, y: H * 0.52, w: 170, h: 62 };
+
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  let state = "start"; // "start" | "playing" | "dead"
+  let state = "menu"; // "menu" | "ready" | "playing" | "dead"
   let bird, pipes, score, highScore, groundOffset, lastTime, deathTime;
 
   function getHighScore() {
@@ -150,28 +153,55 @@
   // ---------------------------------------------------------------------
   // Input
   // ---------------------------------------------------------------------
+  function startGame() {
+    reset();
+    state = "ready";
+  }
+
   function flap() {
-    if (state === "start") {
+    if (state === "ready") {
       state = "playing";
       bird.vy = FLAP_VELOCITY;
     } else if (state === "playing") {
       bird.vy = FLAP_VELOCITY;
     } else if (state === "dead") {
       if (performance.now() - deathTime > 400) {
-        state = "start";
-        reset();
+        startGame();
       }
     }
   }
 
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (W / rect.width),
+      y: (e.clientY - rect.top) * (H / rect.height),
+    };
+  }
+
+  function pointInRect(p, r) {
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+  }
+
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" || e.code === "ArrowUp") {
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter") {
       e.preventDefault();
-      flap();
+      if (state === "menu") {
+        startGame();
+      } else {
+        flap();
+      }
     }
   });
   canvas.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    if (state === "menu") {
+      const pos = getCanvasPos(e);
+      if (pointInRect(pos, START_BUTTON)) {
+        startGame();
+      }
+      return;
+    }
     flap();
   });
 
@@ -299,6 +329,90 @@
     ctx.fillText(String(score), W / 2, 20);
   }
 
+  function wrapText(text, maxWidth) {
+    const words = text.split(" ");
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function drawButton(r, label) {
+    const radius = 14;
+    ctx.save();
+
+    // drop shadow / 3D base
+    ctx.fillStyle = "#0a2a7a";
+    roundedRectPath(r.x, r.y + 6, r.w, r.h, radius);
+    ctx.fill();
+
+    // button face
+    const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+    g.addColorStop(0, "#1e5be0");
+    g.addColorStop(1, FLAG_BLUE);
+    ctx.fillStyle = g;
+    roundedRectPath(r.x, r.y, r.w, r.h, radius);
+    ctx.fill();
+
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 3;
+    roundedRectPath(r.x, r.y, r.w, r.h, radius);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 2;
+    ctx.font = "bold 26px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeText(label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+
+    ctx.restore();
+  }
+
+  function roundedRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawMenu() {
+    // Logo
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 38px sans-serif";
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = FLAG_BLUE;
+    const logoY = H * 0.22;
+    ctx.strokeText("Flappy Hamey", W / 2, logoY);
+    ctx.fillText("Flappy Hamey", W / 2, logoY);
+
+    // Subtitle
+    ctx.font = "13px sans-serif";
+    ctx.fillStyle = "#111111";
+    const subLines = wrapText("can you get Hamey back to his homeland?", 260);
+    subLines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, logoY + 32 + i * 18);
+    });
+
+    drawButton(START_BUTTON, "START");
+  }
+
   function drawCenteredPanel(lines) {
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     const panelW = 260;
@@ -388,6 +502,14 @@
   function render() {
     drawSky();
 
+    if (state === "menu") {
+      drawGround();
+      drawMenu();
+      hint.style.visibility = "hidden";
+      return;
+    }
+    hint.style.visibility = "visible";
+
     for (const pipe of pipes) {
       drawFlagPipe(pipe.x, 0, PIPE_WIDTH, pipe.gapTop, true);
       drawFlagPipe(pipe.x, pipe.gapBottom, PIPE_WIDTH, (H - GROUND_HEIGHT) - pipe.gapBottom, false);
@@ -397,11 +519,10 @@
     drawBird();
     drawScore();
 
-    if (state === "start") {
+    if (state === "ready") {
       drawCenteredPanel([
-        { text: "Flappy Bird", font: "bold 26px sans-serif" },
-        { text: "Israeli Flag Edition", font: "14px sans-serif", color: "#bdeef7" },
-        { text: "tap / click / space to start", font: "13px sans-serif" },
+        { text: "Get Ready", font: "bold 24px sans-serif" },
+        { text: "tap / click / space to flap", font: "13px sans-serif" },
       ]);
     } else if (state === "dead") {
       drawCenteredPanel([
