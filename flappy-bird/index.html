@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>Flappy Bird — Israeli Flag Edition</title>
+<style>
+  :root {
+    --sky-top: #4ec0e9;
+    --sky-bottom: #bdeef7;
+    --ground: #ded17e;
+    --ground-dark: #c4b263;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  #stage {
+    position: relative;
+    width: 360px;
+    max-width: 100vw;
+    aspect-ratio: 360 / 600;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: crisp-edges;
+  }
+  #hint {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="360" height="600"></canvas>
+    <div id="hint">tap / click / space to flap</div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // ---------------------------------------------------------------------
+  // Bird placeholder image.
+  //
+  // Drop a transparent PNG at "assets/bird.png" (relative to this file)
+  // and it will automatically be used instead of the placeholder box the
+  // next time the page loads — no code changes needed. Recommended size
+  // is roughly square, ~64x64px, transparent background.
+  // ---------------------------------------------------------------------
+  const BIRD_IMAGE_SRC = "assets/bird.png";
+  const birdImg = new Image();
+  let birdImgReady = false;
+  birdImg.onload = () => { birdImgReady = true; };
+  birdImg.onerror = () => { birdImgReady = false; };
+  birdImg.src = BIRD_IMAGE_SRC;
+
+  // ---------------------------------------------------------------------
+  // Constants
+  // ---------------------------------------------------------------------
+  const GRAVITY = 1500;        // px/s^2
+  const FLAP_VELOCITY = -420;  // px/s
+  const MAX_FALL_SPEED = 700;
+  const PIPE_SPEED = 150;      // px/s
+  const PIPE_GAP = 165;
+  const PIPE_WIDTH = 68;
+  const PIPE_SPACING = 220;    // horizontal distance between pipe pairs
+  const GROUND_HEIGHT = 90;
+  const BIRD_SIZE = 32;
+  const BIRD_X = W * 0.3;
+
+  const FLAG_BLUE = "#0038b8";
+  const FLAG_WHITE = "#ffffff";
+
+  const HIGH_SCORE_KEY = "flappyIsraeliFlagsHighScore";
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+  let state = "start"; // "start" | "playing" | "dead"
+  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime;
+
+  function getHighScore() {
+    try {
+      return parseInt(localStorage.getItem(HIGH_SCORE_KEY), 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function setHighScore(v) {
+    try { localStorage.setItem(HIGH_SCORE_KEY, String(v)); } catch (e) {}
+  }
+
+  function reset() {
+    bird = {
+      y: H / 2,
+      vy: 0,
+      rotation: 0,
+    };
+    pipes = [];
+    score = 0;
+    groundOffset = 0;
+    let x = W + 100;
+    for (let i = 0; i < 4; i++) {
+      pipes.push(makePipe(x));
+      x += PIPE_SPACING;
+    }
+  }
+
+  function makePipe(x) {
+    const margin = 60;
+    const usable = H - GROUND_HEIGHT - PIPE_GAP - margin * 2;
+    const gapTop = margin + Math.random() * Math.max(usable, 0);
+    return { x, gapTop, gapBottom: gapTop + PIPE_GAP, passed: false };
+  }
+
+  highScore = getHighScore();
+  reset();
+
+  // ---------------------------------------------------------------------
+  // Input
+  // ---------------------------------------------------------------------
+  function flap() {
+    if (state === "start") {
+      state = "playing";
+      bird.vy = FLAP_VELOCITY;
+    } else if (state === "playing") {
+      bird.vy = FLAP_VELOCITY;
+    } else if (state === "dead") {
+      if (performance.now() - deathTime > 400) {
+        state = "start";
+        reset();
+      }
+    }
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+      e.preventDefault();
+      flap();
+    }
+  });
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    flap();
+  });
+
+  // ---------------------------------------------------------------------
+  // Drawing helpers
+  // ---------------------------------------------------------------------
+  function drawSky() {
+    const g = ctx.createLinearGradient(0, 0, 0, H - GROUND_HEIGHT);
+    g.addColorStop(0, "#4ec0e9");
+    g.addColorStop(1, "#bdeef7");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H - GROUND_HEIGHT);
+  }
+
+  function drawGround() {
+    const y = H - GROUND_HEIGHT;
+    ctx.fillStyle = "#ded17e";
+    ctx.fillRect(0, y, W, GROUND_HEIGHT);
+    ctx.fillStyle = "#8ac53f";
+    ctx.fillRect(0, y, W, 10);
+
+    // simple scrolling stripes for a sense of motion
+    ctx.fillStyle = "#c4b263";
+    const stripeW = 24;
+    for (let x = -stripeW + (groundOffset % stripeW); x < W; x += stripeW) {
+      ctx.fillRect(x, y + 14, stripeW / 2, GROUND_HEIGHT - 14);
+    }
+  }
+
+  // Draws a Star of David (hexagram) centered at (cx, cy).
+  function drawStarOfDavid(cx, cy, r, color, lineWidth) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = "miter";
+
+    function triangle(rotationDeg) {
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const angle = (Math.PI / 180) * (rotationDeg + i * 120 - 90);
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    triangle(0);
+    triangle(60);
+  }
+
+  // Draws one pipe segment (top or bottom half of a pipe pair) styled
+  // after the Israeli flag: white field, two blue horizontal stripes,
+  // and (space permitting) a blue Star of David.
+  function drawFlagPipe(x, y, width, height, capAtBottom) {
+    if (height <= 0) return;
+
+    // White field
+    ctx.fillStyle = FLAG_WHITE;
+    ctx.fillRect(x, y, width, height);
+
+    const stripeH = Math.max(5, Math.min(16, height * 0.14));
+
+    // Two blue stripes near the outer edges of the pipe
+    ctx.fillStyle = FLAG_BLUE;
+    ctx.fillRect(x, y + height * 0.14, width, stripeH);
+    ctx.fillRect(x, y + height * 0.86 - stripeH, width, stripeH);
+
+    // Star of David centered in the remaining space, if there's room
+    const starR = Math.min(width, height) * 0.26;
+    if (height > 70 && starR > 6) {
+      drawStarOfDavid(x + width / 2, y + height / 2, starR, FLAG_BLUE, Math.max(1.5, starR * 0.12));
+    }
+
+    // Pipe border + cap (like classic flappy-bird pipes) for readability
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    const capH = 22;
+    const capOverhang = 5;
+    ctx.fillStyle = FLAG_WHITE;
+    if (capAtBottom) {
+      ctx.fillRect(x - capOverhang, y + height - capH, width + capOverhang * 2, capH);
+      ctx.strokeRect(x - capOverhang, y + height - capH, width + capOverhang * 2, capH);
+    } else {
+      ctx.fillRect(x - capOverhang, y, width + capOverhang * 2, capH);
+      ctx.strokeRect(x - capOverhang, y, width + capOverhang * 2, capH);
+    }
+  }
+
+  function drawBird() {
+    ctx.save();
+    ctx.translate(BIRD_X, bird.y);
+    ctx.rotate(bird.rotation);
+
+    if (birdImgReady) {
+      ctx.drawImage(birdImg, -BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+    } else {
+      // Placeholder box: swap in assets/bird.png to replace this.
+      ctx.fillStyle = "#ffcc33";
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.lineWidth = 2;
+      ctx.fillRect(-BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+      ctx.strokeRect(-BIRD_SIZE / 2, -BIRD_SIZE / 2, BIRD_SIZE, BIRD_SIZE);
+
+      ctx.fillStyle = "#1a1a1a";
+      ctx.font = "bold 8px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("BIRD", 0, 1);
+    }
+    ctx.restore();
+  }
+
+  function drawScore() {
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 4;
+    ctx.font = "bold 40px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.strokeText(String(score), W / 2, 20);
+    ctx.fillText(String(score), W / 2, 20);
+  }
+
+  function drawCenteredPanel(lines) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    const panelW = 260;
+    const panelH = 40 + lines.length * 34;
+    const px = (W - panelW) / 2;
+    const py = (H - panelH) / 2;
+    ctx.fillRect(px, py, panelW, panelH);
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, panelW, panelH);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    lines.forEach((line, i) => {
+      ctx.font = line.font || "16px sans-serif";
+      ctx.fillStyle = line.color || "#ffffff";
+      ctx.fillText(line.text, W / 2, py + 30 + i * 34);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------------------
+  function birdBox() {
+    return {
+      left: BIRD_X - BIRD_SIZE / 2 + 4,
+      right: BIRD_X + BIRD_SIZE / 2 - 4,
+      top: bird.y - BIRD_SIZE / 2 + 4,
+      bottom: bird.y + BIRD_SIZE / 2 - 4,
+    };
+  }
+
+  function checkCollision() {
+    const b = birdBox();
+
+    if (b.bottom >= H - GROUND_HEIGHT) return true;
+    if (b.top <= 0) return true;
+
+    for (const pipe of pipes) {
+      if (b.right > pipe.x && b.left < pipe.x + PIPE_WIDTH) {
+        if (b.top < pipe.gapTop || b.bottom > pipe.gapBottom) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function update(dt) {
+    groundOffset -= PIPE_SPEED * dt;
+
+    if (state !== "playing") return;
+
+    bird.vy += GRAVITY * dt;
+    if (bird.vy > MAX_FALL_SPEED) bird.vy = MAX_FALL_SPEED;
+    bird.y += bird.vy * dt;
+
+    bird.rotation = Math.max(-0.5, Math.min(1.3, bird.vy / 500));
+
+    for (const pipe of pipes) {
+      pipe.x -= PIPE_SPEED * dt;
+      if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X) {
+        pipe.passed = true;
+        score++;
+      }
+    }
+
+    while (pipes.length && pipes[0].x + PIPE_WIDTH < -50) {
+      pipes.shift();
+      const lastX = pipes[pipes.length - 1].x;
+      pipes.push(makePipe(lastX + PIPE_SPACING));
+    }
+
+    if (checkCollision()) {
+      state = "dead";
+      deathTime = performance.now();
+      if (score > highScore) {
+        highScore = score;
+        setHighScore(highScore);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------
+  function render() {
+    drawSky();
+
+    for (const pipe of pipes) {
+      drawFlagPipe(pipe.x, 0, PIPE_WIDTH, pipe.gapTop, true);
+      drawFlagPipe(pipe.x, pipe.gapBottom, PIPE_WIDTH, (H - GROUND_HEIGHT) - pipe.gapBottom, false);
+    }
+
+    drawGround();
+    drawBird();
+    drawScore();
+
+    if (state === "start") {
+      drawCenteredPanel([
+        { text: "Flappy Bird", font: "bold 26px sans-serif" },
+        { text: "Israeli Flag Edition", font: "14px sans-serif", color: "#bdeef7" },
+        { text: "tap / click / space to start", font: "13px sans-serif" },
+      ]);
+    } else if (state === "dead") {
+      drawCenteredPanel([
+        { text: "Game Over", font: "bold 26px sans-serif", color: "#ff6b6b" },
+        { text: "Score: " + score, font: "18px sans-serif" },
+        { text: "Best: " + highScore, font: "14px sans-serif", color: "#bdeef7" },
+        { text: "tap to try again", font: "13px sans-serif" },
+      ]);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Main loop
+  // ---------------------------------------------------------------------
+  function frame(time) {
+    if (lastTime === undefined) lastTime = time;
+    let dt = (time - lastTime) / 1000;
+    dt = Math.min(dt, 1 / 30); // clamp on tab-switch lag spikes
+    lastTime = time;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
