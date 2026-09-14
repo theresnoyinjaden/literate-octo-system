@@ -107,6 +107,7 @@
   const FLAG_WHITE = "#ffffff";
 
   const HIGH_SCORE_KEY = "flappyIsraeliFlagsHighScore";
+  const WIN_SCORE = 100;
 
   const START_BUTTON = { x: W / 2 - 85, y: H * 0.52, w: 170, h: 62 };
 
@@ -122,8 +123,8 @@
   // ---------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------
-  let state = "menu"; // "menu" | "ready" | "playing" | "dead"
-  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime, clouds;
+  let state = "menu"; // "menu" | "ready" | "playing" | "dead" | "won"
+  let bird, pipes, score, highScore, groundOffset, lastTime, deathTime, clouds, confetti;
 
   function getHighScore() {
     try {
@@ -201,6 +202,45 @@
     for (const c of clouds) drawCloud(c);
   }
 
+  // Celebration confetti, spawned when Hamey reaches Israel.
+  const CONFETTI_COLORS = [FLAG_BLUE, "#ffffff", "#f5c518"];
+  function spawnConfetti() {
+    confetti = [];
+    for (let i = 0; i < 70; i++) {
+      confetti.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * H,
+        vx: (Math.random() - 0.5) * 50,
+        vy: 70 + Math.random() * 90,
+        size: 4 + Math.random() * 5,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 6,
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      });
+    }
+  }
+  function updateConfetti(dt) {
+    for (const p of confetti) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rotation += p.rotSpeed * dt;
+      if (p.y > H + 10) {
+        p.y = -10;
+        p.x = Math.random() * W;
+      }
+    }
+  }
+  function drawConfetti() {
+    for (const p of confetti) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+  }
+
   highScore = getHighScore();
   reset();
   initClouds();
@@ -219,7 +259,7 @@
       bird.vy = FLAP_VELOCITY;
     } else if (state === "playing") {
       bird.vy = FLAP_VELOCITY;
-    } else if (state === "dead") {
+    } else if (state === "dead" || state === "won") {
       if (performance.now() - deathTime > 400) {
         startGame();
       }
@@ -455,16 +495,28 @@
   titleCanvas.height = TITLE_TEX_H;
   const titleCtx = titleCanvas.getContext("2d");
 
-  function renderTitleTexture() {
+  function fitTitleFont(text, maxWidth, baseSize) {
+    let size = baseSize;
+    let font;
+    do {
+      font = `700 ${size}px "Fredoka One", "Comic Sans MS", sans-serif`;
+      titleCtx.font = font;
+      if (titleCtx.measureText(text).width <= maxWidth || size <= 22) break;
+      size -= 2;
+    } while (true);
+    return font;
+  }
+
+  function renderTitleTexture(text, font) {
     const tw = TITLE_TEX_W;
     const th = TITLE_TEX_H;
     titleCtx.clearRect(0, 0, tw, th);
 
-    titleCtx.font = TITLE_FONT;
+    titleCtx.font = font;
     titleCtx.textAlign = "center";
     titleCtx.textBaseline = "middle";
     titleCtx.fillStyle = "#ffffff";
-    titleCtx.fillText(TITLE_TEXT, tw / 2, th / 2 + 2);
+    titleCtx.fillText(text, tw / 2, th / 2 + 2);
 
     titleCtx.globalCompositeOperation = "source-in";
 
@@ -498,21 +550,22 @@
     titleCtx.globalCompositeOperation = "source-over";
   }
 
-  function drawTitle(cx, cy) {
-    renderTitleTexture();
+  function drawTitle(text, cx, cy, baseSize) {
+    const font = fitTitleFont(text, TITLE_TEX_W - 20, baseSize || 46);
+    renderTitleTexture(text, font);
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = TITLE_FONT;
+    ctx.font = font;
 
     // layered outline for a bold, bubbly pop
     ctx.lineJoin = "round";
     ctx.lineWidth = 11;
     ctx.strokeStyle = "#123a7a";
-    ctx.strokeText(TITLE_TEXT, cx, cy);
+    ctx.strokeText(text, cx, cy);
     ctx.lineWidth = 5;
     ctx.strokeStyle = "#ffffff";
-    ctx.strokeText(TITLE_TEXT, cx, cy);
+    ctx.strokeText(text, cx, cy);
 
     // cloudy texture fill
     ctx.drawImage(titleCanvas, cx - TITLE_TEX_W / 2, cy - TITLE_TEX_H / 2, TITLE_TEX_W, TITLE_TEX_H);
@@ -521,7 +574,7 @@
   function drawMenu() {
     // Logo
     const logoY = H * 0.22;
-    drawTitle(W / 2, logoY);
+    drawTitle(TITLE_TEXT, W / 2, logoY);
 
     // Subtitle
     ctx.textAlign = "center";
@@ -588,6 +641,10 @@
     groundOffset -= PIPE_SPEED * dt;
     updateClouds(dt);
 
+    if (state === "won") {
+      updateConfetti(dt);
+      return;
+    }
     if (state !== "playing") return;
 
     bird.vy += GRAVITY * dt;
@@ -601,6 +658,16 @@
       if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X) {
         pipe.passed = true;
         score++;
+        if (score >= WIN_SCORE) {
+          state = "won";
+          deathTime = performance.now();
+          if (score > highScore) {
+            highScore = score;
+            setHighScore(highScore);
+          }
+          spawnConfetti();
+          return;
+        }
       }
     }
 
@@ -655,6 +722,15 @@
         { text: "Score: " + score, font: "18px sans-serif" },
         { text: "Best: " + highScore, font: "14px sans-serif", color: "#bdeef7" },
         { text: "tap to try again", font: "13px sans-serif" },
+      ]);
+    } else if (state === "won") {
+      drawConfetti();
+      drawTitle("Hamey is Home!", W / 2, H * 0.24, 40);
+      drawCenteredPanel([
+        { text: "Hamey made it to Israel!", font: "bold 16px sans-serif", color: "#ffffff" },
+        { text: "and is celebrating!", font: "13px sans-serif", color: "#bdeef7" },
+        { text: "Score: " + score, font: "16px sans-serif" },
+        { text: "tap to play again", font: "13px sans-serif" },
       ]);
     }
   }
